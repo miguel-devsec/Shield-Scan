@@ -1,0 +1,79 @@
+name: PR deploy to production
+
+on:
+  pull_request:
+    branches: [main]  
+  workflow_dispatch:
+
+jobs:
+  deploy-to-production:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build Docker image
+        run: docker build -t shieldscan:test .
+
+      - name: Run container in background
+        run: docker run -d -p 8000:8000 --name shieldscan shieldscan:test
+
+      - name: Wait for container to be ready
+        run: |
+          echo "Esperando que la app esté disponible..."
+          for i in {1..10}; do
+            if curl -s http://localhost:8000/ > /dev/null; then
+              echo "✅ Aplicación disponible"
+              break
+            fi
+            echo "⏳ Esperando..."
+            sleep 3
+          done
+
+      - name: Run functional test script
+        run: python tests/test_web_application.py
+
+      - name: Stop container
+        if: always()
+        run: docker stop shieldscan && docker rm shieldscan
+
+      - name: Set dynamic tag
+        run: echo "TAG=v$(date +'%Y%m%d-%H%M')" >> $GITHUB_ENV
+
+      - name: Build image
+        run: docker build -t arthurtech2025/shield-scan:${{ env.TAG }} .
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_HUB_USER }} --password-stdin
+      
+      - name: Push production image
+        run: docker push arthurtech2025/shield-scan:${{ env.TAG }}
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            echo "📦 Desplegando imagen: arthurtech2025/shield-scan:${{ env.TAG }}"      
+            echo "🔄 Descargando nueva imagen desde DockerHub..."
+            echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_HUB_USER }} --password-stdin
+            docker pull arthurtech2025/shield-scan:${{ env.TAG }}
+            echo "🛑 Deteniendo contenedor anterior (si existe)..."
+            docker stop wordpress-security-scanner || true
+            docker rm wordpress-security-scanner || true
+            echo "🚀 Levantando nuevo contenedor..."
+            docker run -d --name wordpress-security-scanner -p 8080:8000 arthurtech2025/shield-scan:${{ env.TAG }}
+            echo "🔍 Verificando estado del contenedor..."
+            docker ps --filter "name=wordpress-security-scanner"
+            echo "🌐 Accede a la aplicación en: http://${{ secrets.EC2_HOST }}:8080"

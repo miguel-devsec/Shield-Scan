@@ -1,0 +1,47 @@
+name: PR Functional Tests
+
+on:
+  pull_request:
+    branches: [testing]  
+  workflow_dispatch:
+
+jobs:
+  functional-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build Docker image
+        run: docker build -t shieldscan:test .
+
+      - name: Run container in background
+        run: docker run -d -p 8000:8000 --name shieldscan shieldscan:test
+
+      - name: Wait for container to be ready
+        run: |
+          echo "Esperando que la app esté disponible..."
+          for i in {1..10}; do
+            if curl -s http://localhost:8000/ > /dev/null; then
+              echo "✅ Aplicación disponible"
+              break
+            fi
+            echo "⏳ Esperando..."
+            sleep 3
+          done
+
+      - name: Run functional test script
+        run: python tests/test_web_application.py
+
+      - name: Stop container
+        if: always()
+        run: docker stop shieldscan && docker rm shieldscan
