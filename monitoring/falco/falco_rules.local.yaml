@@ -1,0 +1,49 @@
+# ShieldScan — Reglas Falco personalizadas
+# Detecta comportamiento anómalo en tiempo de ejecución dentro de los contenedores
+
+- rule: Shell spawned in ShieldScan container
+  desc: Detecta si se abre una shell interactiva dentro de un contenedor de ShieldScan
+  condition: >
+    spawned_process
+    and container
+    and container.name startswith "shieldscan"
+    and proc.name in (shell_binaries)
+    and not proc.pname in (shell_binaries)
+  output: >
+    Shell abierta en contenedor ShieldScan
+    (user=%user.name container=%container.name shell=%proc.name parent=%proc.pname
+    cmdline=%proc.cmdline image=%container.image.repository)
+  priority: WARNING
+  tags: [container, shell, shieldscan]
+
+- rule: Sensitive file read in container
+  desc: Detecta lectura de archivos sensibles dentro de contenedores
+  condition: >
+    open_read
+    and container
+    and container.name startswith "shieldscan"
+    and (
+      fd.name glob "/etc/shadow"
+      or fd.name glob "/etc/passwd"
+      or fd.name glob "/proc/*/environ"
+    )
+    and not proc.name in (sshd, chronyd)
+  output: >
+    Lectura de archivo sensible en contenedor
+    (user=%user.name container=%container.name file=%fd.name
+    proc=%proc.name image=%container.image.repository)
+  priority: ERROR
+  tags: [container, file, sensitive, shieldscan]
+
+- rule: Unexpected outbound connection from worker
+  desc: El worker solo debería conectarse a sitios web objetivo — detecta conexiones inesperadas
+  condition: >
+    outbound
+    and container.name = "shieldscan-worker"
+    and not (fd.sport in (80, 443))
+    and not fd.sip in ("127.0.0.1")
+  output: >
+    Conexión saliente inesperada desde worker
+    (container=%container.name connection=%fd.name proc=%proc.name)
+  priority: WARNING
+  tags: [container, network, shieldscan]

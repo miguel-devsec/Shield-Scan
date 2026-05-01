@@ -1,6 +1,9 @@
 version: '3.8'
 
 services:
+  # =====================================================================
+  # Aplicación principal
+  # =====================================================================
   db:
     image: postgres:16-alpine
     container_name: shieldscan-db
@@ -87,9 +90,101 @@ services:
       - shieldscan-net
     restart: unless-stopped
 
+  # =====================================================================
+  # Fase 6 — Observabilidad y seguridad en tiempo de ejecución
+  # Activar con: docker compose --profile monitoring up
+  # =====================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: shieldscan-prometheus
+    profiles: [monitoring]
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: shieldscan-grafana
+    profiles: [monitoring]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: shieldscan-loki
+    profiles: [monitoring]
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:2.9.3
+    container_name: shieldscan-promtail
+    profiles: [monitoring]
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./monitoring/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+  falco:
+    image: falcosecurity/falco-no-driver:0.37.0
+    container_name: shieldscan-falco
+    profiles: [monitoring]
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /etc:/host/etc:ro
+      - ./monitoring/falco/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml:ro
+    environment:
+      - FALCO_BPF_PROBE=
+    command: ["/usr/bin/falco", "--modern-bpf", "-o", "json_output=true", "-o", "log_stderr=true"]
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   shieldscan-net:
