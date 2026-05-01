@@ -1,0 +1,118 @@
+version: '3.8'
+
+# Docker Swarm stack para entorno de producción simulado
+# Desplegar con: docker stack deploy -c orquestacion/docker-swarm.yml shieldscan
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shieldscan
+      POSTGRES_USER: shieldscan
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - node.role == manager
+    secrets:
+      - db_password
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  api:
+    image: migueldevsec/shieldscan-api:latest
+    environment:
+      DATABASE_URL: postgresql://shieldscan@db:5432/shieldscan
+      REDIS_URL: redis://redis:6379/0
+    networks:
+      - backend
+      - frontend
+    ports:
+      - "8000:8000"
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+    secrets:
+      - db_password
+      - secret_key
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    image: migueldevsec/shieldscan-worker:latest
+    environment:
+      DATABASE_URL: postgresql://shieldscan@db:5432/shieldscan
+      REDIS_URL: redis://redis:6379/0
+    networks:
+      - backend
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+    secrets:
+      - db_password
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    image: migueldevsec/shieldscan-frontend:latest
+    networks:
+      - frontend
+    ports:
+      - "80:80"
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  backend:
+    driver: overlay
+    attachable: true
+  frontend:
+    driver: overlay
+    attachable: true
+
+secrets:
+  db_password:
+    external: true
+  secret_key:
+    external: true

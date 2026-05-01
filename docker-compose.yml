@@ -1,28 +1,96 @@
 version: '3.8'
 
 services:
-  wordpress-auditor:
-    build: .
-    container_name: wordpress-security-auditor
+  db:
+    image: postgres:16-alpine
+    container_name: shieldscan-db
+    environment:
+      POSTGRES_DB: shieldscan
+      POSTGRES_USER: shieldscan
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shieldscan}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shieldscan"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: shieldscan-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./servicios/api
+      dockerfile: Dockerfile
+    image: migueldevsec/shieldscan-api:latest
+    container_name: shieldscan-api
+    environment:
+      DATABASE_URL: postgresql://shieldscan:${DB_PASSWORD:-shieldscan}@db:5432/shieldscan
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-changeme-use-a-strong-secret-in-production}
     ports:
       - "8000:8000"
-    environment:
-      - HOST=0.0.0.0
-      - PORT=8000
-      - DEBUG=False
-    volumes:
-      - ./reports:/app/reports
-      - ./logs:/app/logs
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
-      - auditor-network
+      - shieldscan-net
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./servicios/worker
+      dockerfile: Dockerfile
+    image: migueldevsec/shieldscan-worker:latest
+    container_name: shieldscan-worker
+    environment:
+      DATABASE_URL: postgresql://shieldscan:${DB_PASSWORD:-shieldscan}@db:5432/shieldscan
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./servicios/frontend
+      dockerfile: Dockerfile
+    image: migueldevsec/shieldscan-frontend:latest
+    container_name: shieldscan-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    networks:
+      - shieldscan-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
 
 networks:
-  auditor-network:
+  shieldscan-net:
     driver: bridge

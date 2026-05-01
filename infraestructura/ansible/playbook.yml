@@ -1,0 +1,121 @@
+---
+# ShieldScan — Playbook de despliegue Ansible
+# Uso: ansible-playbook -i infraestructura/ansible/inventory.yml infraestructura/ansible/playbook.yml
+#
+# Variables requeridas (pasar con -e o en vault):
+#   db_password:  contraseña de PostgreSQL
+#   secret_key:   clave JWT
+#   docker_hub_user / docker_hub_password: credenciales Docker Hub
+
+- name: Desplegar ShieldScan con Docker Compose
+  hosts: all
+  become: true
+
+  vars:
+    app_dir: /opt/shieldscan
+    compose_file: "{{ app_dir }}/docker-compose.yml"
+
+  tasks:
+    # ------------------------------------------------------------------ #
+    # 1. Prerrequisitos del sistema                                       #
+    # ------------------------------------------------------------------ #
+    - name: Instalar dependencias del sistema
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - python3-pip
+        state: present
+        update_cache: true
+
+    - name: Agregar clave GPG de Docker
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Agregar repositorio Docker
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Instalar Docker Engine
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Asegurar que Docker está activo
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # ------------------------------------------------------------------ #
+    # 2. Configurar directorio de la aplicación                          #
+    # ------------------------------------------------------------------ #
+    - name: Crear directorio de la aplicación
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0750"
+
+    - name: Copiar docker-compose.yml al servidor
+      copy:
+        src: ../../docker-compose.yml
+        dest: "{{ compose_file }}"
+        mode: "0640"
+
+    - name: Crear archivo .env con credenciales
+      template:
+        src: templates/env.j2
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+
+    # ------------------------------------------------------------------ #
+    # 3. Autenticar y descargar imágenes                                 #
+    # ------------------------------------------------------------------ #
+    - name: Login a Docker Hub
+      community.docker.docker_login:
+        username: "{{ docker_hub_user }}"
+        password: "{{ docker_hub_password }}"
+      no_log: true
+
+    - name: Descargar imágenes de producción
+      community.docker.docker_image:
+        name: "{{ item }}"
+        source: pull
+      loop:
+        - "migueldevsec/shieldscan-api:latest"
+        - "migueldevsec/shieldscan-worker:latest"
+        - "migueldevsec/shieldscan-frontend:latest"
+
+    # ------------------------------------------------------------------ #
+    # 4. Desplegar con Docker Compose                                    #
+    # ------------------------------------------------------------------ #
+    - name: Levantar la aplicación con Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        state: present
+        pull: always
+
+    - name: Verificar que los servicios están en ejecución
+      community.docker.docker_container_info:
+        name: "{{ item }}"
+      loop:
+        - shieldscan-api
+        - shieldscan-worker
+        - shieldscan-frontend
+        - shieldscan-db
+      register: container_info
+
+    - name: Mostrar estado de contenedores
+      debug:
+        msg: "{{ item.container.Name }} — {{ item.container.State.Status }}"
+      loop: "{{ container_info.results }}"

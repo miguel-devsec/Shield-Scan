@@ -1,0 +1,377 @@
+name: ShieldScan DevSecOps Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
+  API_IMAGE: migueldevsec/shieldscan-api
+  WORKER_IMAGE: migueldevsec/shieldscan-worker
+  FRONTEND_IMAGE: migueldevsec/shieldscan-frontend
+
+# =====================================================================
+# FASE 2 — CODE: Análisis estático, secretos y dependencias
+# =====================================================================
+jobs:
+
+  # -------------------------------------------------------------------
+  # 2a. Detección de secretos expuestos (Gitleaks)
+  # -------------------------------------------------------------------
+  secrets-scan:
+    name: "[Fase 2] Detección de Secretos (Gitleaks)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # -------------------------------------------------------------------
+  # 2b. Análisis estático SAST — Semgrep + Bandit
+  # -------------------------------------------------------------------
+  sast:
+    name: "[Fase 2] SAST — Semgrep + Bandit"
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install analysis tools
+        run: pip install semgrep bandit
+
+      - name: Run Semgrep (Python security rules)
+        run: |
+          semgrep --config=p/python \
+                  --config=p/security-audit \
+                  --config=p/owasp-top-ten \
+                  servicios/api servicios/worker \
+                  --junit-xml semgrep-results.xml \
+                  --error || true
+        continue-on-error: false
+
+      - name: Run Bandit (Python security linter)
+        run: |
+          bandit -r servicios/api/app servicios/worker/app \
+                 -f json -o bandit-results.json \
+                 --severity-level medium \
+                 --confidence-level medium || true
+
+      - name: Display Bandit results
+        run: |
+          if [ -f bandit-results.json ]; then
+            python3 -c "
+          import json, sys
+          with open('bandit-results.json') as f:
+              data = json.load(f)
+          issues = data.get('results', [])
+          high = [i for i in issues if i['issue_severity'] == 'HIGH']
+          print(f'Total issues: {len(issues)}, HIGH severity: {len(high)}')
+          if high:
+              for i in high:
+                  print(f\"  [{i['issue_severity']}] {i['issue_text']} — {i['filename']}:{i['line_number']}\")
+              sys.exit(1)
+          "
+          fi
+
+      - name: Upload SAST artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-reports
+          path: |
+            semgrep-results.xml
+            bandit-results.json
+
+  # -------------------------------------------------------------------
+  # 2c. Análisis de dependencias SCA — Trivy sobre archivos de deps
+  # -------------------------------------------------------------------
+  sca:
+    name: "[Fase 2] SCA — Trivy (Dependencias)"
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy on Python dependencies (API)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: servicios/api
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          format: table
+          exit-code: "0"
+
+      - name: Run Trivy on Python dependencies (Worker)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: servicios/worker
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          format: table
+          exit-code: "0"
+
+      - name: Run Trivy on Node.js dependencies (Frontend)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: servicios/frontend
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          format: table
+          exit-code: "0"
+
+# =====================================================================
+# FASE 3 — BUILD: Construcción y escaneo de imágenes Docker
+# =====================================================================
+
+  build-and-scan:
+    name: "[Fase 3] Build + Trivy Image Scan"
+    runs-on: ubuntu-latest
+    needs: [sast, sca]
+    strategy:
+      matrix:
+        service:
+          - name: api
+            context: ./servicios/api
+            image: migueldevsec/shieldscan-api
+          - name: worker
+            context: ./servicios/worker
+            image: migueldevsec/shieldscan-worker
+          - name: frontend
+            context: ./servicios/frontend
+            image: migueldevsec/shieldscan-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image — ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          push: false
+          tags: ${{ matrix.service.image }}:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+
+      - name: Scan image with Trivy — ${{ matrix.service.name }}
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ matrix.service.image }}:scan
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+
+      - name: Trivy SARIF report — ${{ matrix.service.name }}
+        uses: aquasecurity/trivy-action@master
+        if: always()
+        with:
+          image-ref: ${{ matrix.service.image }}:scan
+          format: sarif
+          output: trivy-${{ matrix.service.name }}.sarif
+
+      - name: Upload Trivy SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.service.name }}.sarif
+          category: trivy-${{ matrix.service.name }}
+
+# =====================================================================
+# FASE 4 — TEST: Pruebas unitarias
+# =====================================================================
+
+  unit-tests:
+    name: "[Fase 4] Pruebas Unitarias (Pytest)"
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install API test dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r servicios/api/requirements.txt
+          pip install pytest pytest-cov httpx
+
+      - name: Run API unit tests
+        run: |
+          cd servicios/api
+          pytest tests/ -v --tb=short \
+                 --cov=app --cov-report=xml:coverage.xml \
+                 --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: servicios/api/coverage.xml
+
+# =====================================================================
+# FASE 5 — IaC: Escaneo de configuración con Checkov
+# =====================================================================
+
+  iac-scan:
+    name: "[Fase 5] IaC — Checkov"
+    runs-on: ubuntu-latest
+    needs: secrets-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov on Docker Compose
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          file: docker-compose.yml
+          framework: dockerfile,secrets
+          soft_fail: true
+          output_format: cli,sarif
+          output_file_path: checkov-compose.sarif
+
+      - name: Run Checkov on Swarm orchestration
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: orquestacion
+          framework: dockerfile,secrets
+          soft_fail: true
+          output_format: cli,sarif
+          output_file_path: checkov-swarm.sarif
+
+      - name: Run Checkov on Dockerfiles
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: servicios
+          framework: dockerfile
+          soft_fail: false
+          output_format: cli,sarif
+          output_file_path: checkov-dockerfiles.sarif
+
+      - name: Upload Checkov SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-dockerfiles.sarif
+          category: checkov
+
+# =====================================================================
+# FASE 5 — RELEASE: Push a Docker Hub (solo en main)
+# =====================================================================
+
+  push-images:
+    name: "[Fase 5] Push Images → Docker Hub"
+    runs-on: ubuntu-latest
+    needs: [build-and-scan, unit-tests, iac-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        service:
+          - name: api
+            context: ./servicios/api
+            image: migueldevsec/shieldscan-api
+          - name: worker
+            context: ./servicios/worker
+            image: migueldevsec/shieldscan-worker
+          - name: frontend
+            context: ./servicios/frontend
+            image: migueldevsec/shieldscan-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set semantic version tag
+        run: echo "TAG=v$(date +'%Y%m%d-%H%M')" >> "$GITHUB_ENV"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Build and push — ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          push: true
+          tags: |
+            ${{ matrix.service.image }}:${{ env.TAG }}
+            ${{ matrix.service.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+# =====================================================================
+# FASE 4 — DAST: OWASP ZAP contra entorno de staging
+# =====================================================================
+
+  dast:
+    name: "[Fase 4] DAST — OWASP ZAP"
+    runs-on: ubuntu-latest
+    needs: push-images
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start staging environment
+        run: |
+          docker compose up -d --wait
+          sleep 15
+        env:
+          DB_PASSWORD: staging_password
+          SECRET_KEY: staging_secret_key_for_zap_test
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:8000/health; then
+              echo "API is up"; break
+            fi
+            echo "Waiting... ($i/12)"; sleep 5
+          done
+
+      - name: Run OWASP ZAP Baseline Scan (API)
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: http://localhost:8000
+          rules_file_name: .github/zap-rules.tsv
+          cmd_options: -I
+          fail_action: warn
+
+      - name: Run OWASP ZAP Baseline Scan (Frontend)
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: http://localhost:3000
+          cmd_options: -I
+          fail_action: warn
+
+      - name: Stop staging environment
+        if: always()
+        run: docker compose down -v
