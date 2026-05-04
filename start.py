@@ -10,13 +10,13 @@ from pathlib import Path
 
 def main():
     """Función principal para iniciar el servidor"""
-    
+
     # Verificar que estamos en el directorio correcto
     if not Path("main.py").exists():
         print("❌ Error: No se encontró main.py en el directorio actual")
         print("   Asegúrate de ejecutar este script desde el directorio del proyecto")
         sys.exit(1)
-    
+
     # Verificar dependencias
     try:
         import fastapi
@@ -27,12 +27,12 @@ def main():
         print(f"❌ Error: Dependencias faltantes: {e}")
         print("   Ejecuta: pip install -r requirements.txt")
         sys.exit(1)
-    
+
     # Configuración del servidor
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     debug = os.getenv("DEBUG", "False").lower() == "true"
-    
+
     print("🚀 Iniciando WordPress Security Auditor...")
     print(f"   Host: {host}")
     print(f"   Puerto: {port}")
@@ -45,7 +45,7 @@ def main():
     print("   • API REST completa")
     print("\n🔒 Presiona Ctrl+C para detener el servidor")
     print("-" * 50)
-    
+
     try:
         # Iniciar servidor
         uvicorn.run(

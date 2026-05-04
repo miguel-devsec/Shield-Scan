@@ -205,36 +205,36 @@ AUDITOR_NAME=Equipo de Seguridad
 
 El **WordPress Security Auditor** es una herramienta completa, profesional y lista para producción que cumple con todos los requisitos solicitados:
 
-✅ **Auditoría completa de seguridad**  
-✅ **Verificación de headers de seguridad**  
-✅ **Análisis de WordPress específico**  
-✅ **Reportes profesionales en HTML/PDF**  
-✅ **API REST completa**  
-✅ **Interfaz web moderna**  
-✅ **Código seguro y escalable**  
-✅ **Documentación completa**  
-✅ **Dockerizado y listo para producción**  
+✅ **Auditoría completa de seguridad**
+✅ **Verificación de headers de seguridad**
+✅ **Análisis de WordPress específico**
+✅ **Reportes profesionales en HTML/PDF**
+✅ **API REST completa**
+✅ **Interfaz web moderna**
+✅ **Código seguro y escalable**
+✅ **Documentación completa**
+✅ **Dockerizado y listo para producción**
 
 ### 🆕 Mejoras Implementadas en v1.2
 
-✅ **Detección inteligente de WordPress con 100% precisión**  
-✅ **Verificaciones condicionales (WordPress vs No-WordPress)**  
-✅ **Configuración flexible para producción/desarrollo**  
-✅ **Seguridad mejorada (sanitización HTML, manejo de excepciones)**  
-✅ **Refactorización completa del código**  
-✅ **Indicadores técnicos ocultos en producción**  
-✅ **Evaluación de riesgos más estricta y precisa**  
-✅ **Explicaciones detalladas de riesgos para cada verificación**  
-✅ **Recomendaciones específicas de corrección**  
-✅ **Clasificación correcta de vulnerabilidades críticas**  
-✅ **Guía completa de verificaciones manuales**  
-✅ **Mejor detección de amenazas de seguridad**  
+✅ **Detección inteligente de WordPress con 100% precisión**
+✅ **Verificaciones condicionales (WordPress vs No-WordPress)**
+✅ **Configuración flexible para producción/desarrollo**
+✅ **Seguridad mejorada (sanitización HTML, manejo de excepciones)**
+✅ **Refactorización completa del código**
+✅ **Indicadores técnicos ocultos en producción**
+✅ **Evaluación de riesgos más estricta y precisa**
+✅ **Explicaciones detalladas de riesgos para cada verificación**
+✅ **Recomendaciones específicas de corrección**
+✅ **Clasificación correcta de vulnerabilidades críticas**
+✅ **Guía completa de verificaciones manuales**
+✅ **Mejor detección de amenazas de seguridad**
 
 La herramienta está lista para ser utilizada inmediatamente y puede ser extendida fácilmente para agregar nuevas funcionalidades en el futuro.
 
 ---
 
-**Desarrollado con ❤️ por el Equipo de Seguridad y Operaciones**  
-**Versión**: 1.2.0  
-**Fecha**: Octubre 2025  
+**Desarrollado con ❤️ por el Equipo de Seguridad y Operaciones**
+**Versión**: 1.2.0
+**Fecha**: Octubre 2025
 **Ciudad**: Bogotá, Colombia

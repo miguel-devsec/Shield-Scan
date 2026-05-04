@@ -190,7 +190,7 @@ async def audit_multiple_sites():
         "https://sitio2.com",
         "https://sitio3.com"
     ]
-    
+
     async with httpx.AsyncClient() as client:
         for site in sites:
             response = await client.post(

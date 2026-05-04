@@ -4,8 +4,8 @@
 
 ShieldScan es un auditor de seguridad web con arquitectura de microservicios. Este documento describe el modelo de amenazas STRIDE para los componentes principales del sistema.
 
-**Herramienta utilizada:** OWASP Threat Dragon  
-**Metodología:** STRIDE  
+**Herramienta utilizada:** OWASP Threat Dragon
+**Metodología:** STRIDE
 **Fecha:** 2025
 
 ---

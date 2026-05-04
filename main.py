@@ -29,12 +29,12 @@ class SecurityAuditRequest(BaseModel):
 
 class SecurityHeaders:
     """Clase para validar headers de seguridad"""
-    
+
     @staticmethod
     def check_security_headers(headers: Dict[str, str]) -> Dict[str, Dict]:
         """Verifica headers de seguridad críticos"""
         results = {}
-        
+
         # Headers críticos de seguridad
         critical_headers = {
             'Strict-Transport-Security': {
@@ -73,15 +73,15 @@ class SecurityHeaders:
                 'recommended': 'geolocation=(), microphone=(), camera=()'
             }
         }
-        
+
             # Crear diccionario case-insensitive de headers
         headers_lower = {k.lower(): v for k, v in headers.items()}
-        
+
         for header, config in critical_headers.items():
             # Buscar el header en minúsculas
             header_lower = header.lower()
             header_value = headers_lower.get(header_lower, '')
-            
+
             results[header] = {
                 'present': bool(header_value),
                 'value': header_value,
@@ -90,34 +90,34 @@ class SecurityHeaders:
                 'recommended': config['recommended'],
                 'status': 'PASS' if header_value else ('WARNING' if config['required'] else 'INFO')
             }
-        
+
         return results
 
 class WordPressSecurityChecker:
     """Clase principal para verificar seguridad de WordPress"""
-    
+
     def __init__(self):
         self.session = None
-    
+
     async def __aenter__(self):
         self.session = httpx.AsyncClient(
-            timeout=30.0, 
+            timeout=30.0,
             follow_redirects=True,
             verify=True,  # Verificar certificados SSL
             max_redirects=5
         )
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session:
             await self.session.aclose()
-    
+
     async def check_wp_admin_access(self, base_url: str) -> Dict:
         """Verifica si wp-admin está accesible públicamente"""
         try:
             wp_admin_url = f"{base_url.rstrip('/')}/wp-admin/"
             response = await self.session.get(wp_admin_url)
-            
+
             # Si redirige a login, está bien configurado
             if response.status_code == 302 or response.status_code == 301:
                 return {
@@ -127,7 +127,7 @@ class WordPressSecurityChecker:
                     'status_code': response.status_code,
                     'risk_explanation': 'El panel de administración está correctamente protegido y redirige a autenticación.'
                 }
-            
+
             # Si devuelve 200, verificar contenido
             elif response.status_code == 200:
                 content = response.text.lower()
@@ -155,7 +155,7 @@ class WordPressSecurityChecker:
                     'status_code': response.status_code,
                     'risk_explanation': 'El panel de administración está correctamente protegido y no es accesible públicamente.'
                 }
-                
+
         except Exception as e:
             return {
                 'accessible': None,
@@ -164,13 +164,13 @@ class WordPressSecurityChecker:
                 'status_code': None,
                 'risk_explanation': 'No se pudo verificar el estado del panel de administración.'
             }
-    
+
     async def check_xmlrpc_access(self, base_url: str) -> Dict:
         """Verifica si xmlrpc.php está accesible"""
         try:
             xmlrpc_url = f"{base_url.rstrip('/')}/xmlrpc.php"
             response = await self.session.get(xmlrpc_url)
-            
+
             # Cualquier respuesta que no sea 404 indica que el archivo existe
             if response.status_code == 200:
                 content = response.text.lower()
@@ -219,7 +219,7 @@ class WordPressSecurityChecker:
                     'risk_explanation': f'CRÍTICO: El archivo xmlrpc.php responde con código {response.status_code}, lo que indica que XML-RPC está habilitado y representa un riesgo de seguridad.',
                     'recommendation': 'Deshabilitar XML-RPC completamente.'
                 }
-                
+
         except Exception as e:
             return {
                 'accessible': None,
@@ -228,13 +228,13 @@ class WordPressSecurityChecker:
                 'status_code': None,
                 'risk_explanation': 'No se pudo verificar el estado de xmlrpc.php.'
             }
-    
+
     async def check_wp_config_exposure(self, base_url: str) -> Dict:
         """Verifica si wp-config.php está expuesto"""
         try:
             config_url = f"{base_url.rstrip('/')}/wp-config.php"
             response = await self.session.get(config_url)
-            
+
             if response.status_code == 200:
                 content = response.text.lower()
                 if 'db_name' in content or 'db_user' in content or 'db_password' in content:
@@ -264,7 +264,7 @@ class WordPressSecurityChecker:
                     'risk_explanation': 'CORRECTO: El archivo wp-config.php no es accesible públicamente, lo que protege la configuración sensible del sitio.',
                     'recommendation': 'Mantener wp-config.php protegido y fuera del directorio web público.'
                 }
-                
+
         except Exception as e:
             return {
                 'exposed': None,
@@ -273,18 +273,18 @@ class WordPressSecurityChecker:
                 'status_code': None,
                 'risk_explanation': 'No se pudo verificar el estado de wp-config.php.'
             }
-    
+
     async def check_directory_listing(self, base_url: str) -> Dict:
         """Verifica si el listado de directorios está habilitado"""
         try:
             # Probar algunos directorios comunes de WordPress
             test_dirs = ['/wp-content/', '/wp-includes/', '/wp-admin/', '/uploads/']
             results = []
-            
+
             for directory in test_dirs:
                 test_url = f"{base_url.rstrip('/')}{directory}"
                 response = await self.session.get(test_url)
-                
+
                 if response.status_code == 200:
                     content = response.text.lower()
                     # Detectar listado de directorios por patrones comunes
@@ -294,9 +294,9 @@ class WordPressSecurityChecker:
                         'last modified', 'size', 'name</th>', '<th>name</th>',
                         '..</a>', 'parent</a>', 'up to parent directory'
                     ]
-                    
+
                     has_listing = any(indicator in content for indicator in listing_indicators)
-                    
+
                     if has_listing:
                         results.append({
                             'directory': directory,
@@ -318,7 +318,7 @@ class WordPressSecurityChecker:
                         'status': 'PASS',
                         'risk_explanation': f'CORRECTO: El directorio {directory} no es accesible o está protegido.'
                     })
-            
+
             # Determinar estado general
             any_listing = any(r['listing_enabled'] for r in results)
             return {
@@ -329,7 +329,7 @@ class WordPressSecurityChecker:
                 'recommendation': 'Deshabilitar el listado de directorios en el servidor web (Apache: Options -Indexes, Nginx: autoindex off) o agregar archivos index.html vacíos en directorios sensibles.' if any_listing else 'Mantener el listado de directorios deshabilitado.',
                 'details': results
             }
-            
+
         except Exception as e:
             return {
                 'directory_listing_enabled': None,
@@ -338,7 +338,7 @@ class WordPressSecurityChecker:
                 'risk_explanation': 'No se pudo verificar el estado del listado de directorios.',
                 'details': []
             }
-    
+
     async def check_ssl_configuration(self, base_url: str) -> Dict:
         """Verifica configuración SSL"""
         try:
@@ -351,10 +351,10 @@ class WordPressSecurityChecker:
                     'risk_explanation': 'CRÍTICO: El sitio no utiliza HTTPS, lo que significa que toda la comunicación entre el navegador y el servidor es transmitida en texto plano. Esto permite a atacantes interceptar credenciales, cookies de sesión, y cualquier información sensible transmitida.',
                     'recommendation': 'URGENTE: Implementar certificado SSL válido y configurar redirección automática de HTTP a HTTPS.'
                 }
-            
+
             # Hacer petición para verificar SSL
             response = await self.session.get(base_url)
-            
+
             # Verificar si la respuesta es exitosa
             if response.status_code == 200:
                 return {
@@ -374,7 +374,7 @@ class WordPressSecurityChecker:
                     'risk_explanation': 'El sitio utiliza HTTPS pero presenta problemas de conectividad o configuración.',
                     'recommendation': 'Verificar la configuración del servidor y el certificado SSL.'
             }
-            
+
         except Exception as e:
             return {
                 'ssl_enabled': None,
@@ -384,13 +384,13 @@ class WordPressSecurityChecker:
                 'risk_explanation': 'No se pudo verificar la configuración SSL del sitio.',
                 'recommendation': 'Verificar manualmente la configuración SSL del sitio.'
             }
-    
+
     async def detect_wordpress(self, base_url: str) -> Dict:
         """Detecta si el sitio es WordPress con lógica mejorada"""
         try:
             response = await self.session.get(base_url)
             content = response.text.lower()
-            
+
             wordpress_indicators = {
                 'meta_generator': False,
                 'wp_json': False,
@@ -401,14 +401,14 @@ class WordPressSecurityChecker:
                 'wp_scripts': False,
                 'wp_version': False  # NUEVO: Detectar versión específica
             }
-            
+
             # 1. Meta generator (MÁS ESTRICTO)
             import re
             # Patrón más específico para meta generator de WordPress
             meta_pattern = r'<meta[^>]*name=["\']generator["\'][^>]*content=["\']WordPress[^>]*>'
             if re.search(meta_pattern, content, re.IGNORECASE):
                 wordpress_indicators['meta_generator'] = True
-            
+
             # 2. WordPress REST API (MÁS ESTRICTO)
             try:
                 wp_json_response = await self.session.get(f"{base_url.rstrip('/')}/wp-json/wp/v2/")
@@ -421,21 +421,21 @@ class WordPressSecurityChecker:
                 # Log error for debugging but don't expose to user
                 print(f"Error checking {indicator}: {str(e)}")
                 pass
-            
+
             # 3. Directorios WordPress (MÁS ESTRICTO)
             wp_directories = {
                 '/wp-includes/': 'wp_includes',
-                '/wp-content/': 'wp_content', 
+                '/wp-content/': 'wp_content',
                 '/wp-admin/': 'wp_admin'
             }
-            
+
             for directory, indicator in wp_directories.items():
                 try:
                     dir_response = await self.session.get(f"{base_url.rstrip('/')}{directory}")
                     # SOLO considerar válido si responde 200 Y contiene contenido típico de WordPress
                     if dir_response.status_code == 200:
                         dir_content = dir_response.text.lower()
-                        
+
                         if directory == '/wp-admin/':
                             # ANÁLISIS ESPECÍFICO PARA WP-ADMIN
                             wp_admin_indicators = [
@@ -459,7 +459,7 @@ class WordPressSecurityChecker:
                                 wordpress_indicators[indicator] = True
                 except:
                     pass
-            
+
             # 4. wp-login.php (ANÁLISIS DE CONTENIDO ESPECÍFICO)
             try:
                 wp_login_response = await self.session.get(f"{base_url.rstrip('/')}/wp-login.php")
@@ -483,14 +483,14 @@ class WordPressSecurityChecker:
                 # Log error for debugging but don't expose to user
                 print(f"Error checking {indicator}: {str(e)}")
                 pass
-            
+
             # 5. Scripts típicos (MÁS ESTRICTO)
             wp_scripts = ['wp-content/themes', 'wp-content/plugins', 'wp-includes/js', 'wp-includes/css']
             for script in wp_scripts:
                 if script in content:
                     wordpress_indicators['wp_scripts'] = True
                     break
-            
+
             # 6. NUEVO: Detectar versión de WordPress
             try:
                 version_response = await self.session.get(f"{base_url.rstrip('/')}/wp-json/wp/v2/")
@@ -506,7 +506,7 @@ class WordPressSecurityChecker:
                 # Log error for debugging but don't expose to user
                 print(f"Error checking {indicator}: {str(e)}")
                 pass
-            
+
             # Calcular confianza con pesos diferentes
             weights = {
                 'meta_generator': 4,    # Peso muy alto - muy específico de WordPress
@@ -518,11 +518,11 @@ class WordPressSecurityChecker:
                 'wp_includes': 1,     # Peso bajo - puede ser coincidencia
                 'wp_content': 1       # Peso bajo - puede ser coincidencia
             }
-            
+
             total_weight = sum(weights.values())
             weighted_score = sum(weights[indicator] for indicator, value in wordpress_indicators.items() if value)
             confidence = (weighted_score / total_weight) * 100
-            
+
             # LÓGICA ESPECIAL: Si wp_admin Y wp_login están confirmados, es definitivamente WordPress
             if wordpress_indicators['wp_admin'] and wordpress_indicators['wp_login']:
                 is_wordpress = True
@@ -538,7 +538,7 @@ class WordPressSecurityChecker:
             else:
                 # UMBRAL NORMAL para otros casos
                 is_wordpress = confidence >= 60
-            
+
             # Estado basado en confianza
             if is_wordpress:
                 status = 'PASS'
@@ -549,7 +549,7 @@ class WordPressSecurityChecker:
             else:
                 status = 'INFO'
                 message = f'No es WordPress (confianza: {confidence:.1f}%)'
-            
+
             return {
                 'is_wordpress': is_wordpress,
                 'confidence': confidence,
@@ -559,7 +559,7 @@ class WordPressSecurityChecker:
                 'risk_explanation': f'Análisis de detección completado con {confidence:.1f}% de confianza.',
                 'recommendation': 'Continuar con auditoría específica según el tipo de sitio detectado.'
             }
-            
+
         except Exception as e:
             return {
                 'is_wordpress': False,
@@ -570,16 +570,16 @@ class WordPressSecurityChecker:
                 'risk_explanation': 'No se pudo determinar si el sitio es WordPress.',
                 'recommendation': 'Verificar manualmente el tipo de sitio web.'
             }
-    
+
     async def check_general_security(self, base_url: str) -> Dict:
         """Verificaciones de seguridad generales para sitios no-WordPress"""
         try:
             results = {}
-            
+
             # Detectar tecnología del servidor
             response = await self.session.get(base_url)
             server_header = response.headers.get('Server', '')
-            
+
             # Detectar archivos sensibles comunes (excluyendo robots.txt que es normal)
             sensitive_files = [
                 '/.env',
@@ -591,7 +591,7 @@ class WordPressSecurityChecker:
                 '/web.config',
                 '/.htaccess'
             ]
-            
+
             exposed_files = []
             for file_path in sensitive_files:
                 try:
@@ -605,7 +605,7 @@ class WordPressSecurityChecker:
                                 exposed_files.append(file_path)
                 except:
                     pass
-            
+
             # Detectar tecnologías
             technologies = []
             if 'php' in server_header.lower():
@@ -618,7 +618,7 @@ class WordPressSecurityChecker:
                 technologies.append('Apache')
             if 'nginx' in server_header.lower():
                 technologies.append('Nginx')
-            
+
             # Detectar frameworks
             frameworks = []
             content = response.text.lower()
@@ -634,7 +634,7 @@ class WordPressSecurityChecker:
                 frameworks.append('Vue.js')
             if 'angular' in content:
                 frameworks.append('Angular')
-            
+
             # Determinar estado
             if exposed_files:
                 status = 'CRITICAL'
@@ -646,7 +646,7 @@ class WordPressSecurityChecker:
                 message = 'No se detectaron archivos sensibles expuestos'
                 risk_explanation = 'CORRECTO: No se detectaron archivos sensibles expuestos públicamente.'
                 recommendation = 'Mantener esta configuración de seguridad.'
-            
+
             return {
                 'server_technology': server_header,
                 'detected_technologies': technologies,
@@ -657,7 +657,7 @@ class WordPressSecurityChecker:
                 'risk_explanation': risk_explanation,
                 'recommendation': recommendation
             }
-            
+
         except Exception as e:
             return {
                 'server_technology': 'Unknown',
@@ -686,7 +686,7 @@ async def read_root():
                 padding: 0;
                 box-sizing: border-box;
             }
-            
+
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0d1117 100%);
@@ -696,7 +696,7 @@ async def read_root():
                 justify-content: center;
                 padding: 20px;
             }
-            
+
             .container {
                 background: linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%);
                 border: 1px solid #333;
@@ -707,7 +707,7 @@ async def read_root():
                 width: 100%;
                 position: relative;
             }
-            
+
             .container::before {
                 content: '';
                 position: absolute;
@@ -718,12 +718,12 @@ async def read_root():
                 background: linear-gradient(90deg, #00ff00, #00cc00, #009900);
                 border-radius: 15px 15px 0 0;
             }
-            
+
             .header {
                 text-align: center;
                 margin-bottom: 30px;
             }
-            
+
             .header h1 {
                 color: #00ff00;
                 font-size: 2.5em;
@@ -731,17 +731,17 @@ async def read_root():
                 text-shadow: 0 0 10px rgba(0,255,0,0.3);
                 font-weight: 700;
             }
-            
+
             .header p {
                 color: #b0b0b0;
                 font-size: 1.1em;
                 font-weight: 300;
             }
-            
+
             .form-group {
                 margin-bottom: 20px;
             }
-            
+
             .form-group label {
                 display: block;
                 margin-bottom: 8px;
@@ -751,7 +751,7 @@ async def read_root():
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
-            
+
             .form-group input {
                 width: 100%;
                 padding: 15px;
@@ -762,18 +762,18 @@ async def read_root():
                 color: #ffffff;
                 transition: all 0.3s ease;
             }
-            
+
             .form-group input:focus {
                 outline: none;
                 border-color: #00ff00;
                 box-shadow: 0 0 15px rgba(0,255,0,0.2);
                 background: #0f0f0f;
             }
-            
+
             .form-group input::placeholder {
                 color: #666;
             }
-            
+
             .btn {
                 background: linear-gradient(135deg, #00ff00 0%, #00cc00 50%, #009900 100%);
                 color: #000000;
@@ -790,7 +790,7 @@ async def read_root():
                 position: relative;
                 overflow: hidden;
             }
-            
+
             .btn::before {
                 content: '';
                 position: absolute;
@@ -801,17 +801,17 @@ async def read_root():
                 background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
                 transition: left 0.5s;
             }
-            
+
             .btn:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 10px 25px rgba(0,255,0,0.3);
                 background: linear-gradient(135deg, #00ff00 0%, #00ff00 50%, #00cc00 100%);
             }
-            
+
             .btn:hover::before {
                 left: 100%;
             }
-            
+
             .btn:disabled {
                 opacity: 0.4;
                 cursor: not-allowed;
@@ -819,13 +819,13 @@ async def read_root():
                 background: #333;
                 border-color: #666;
             }
-            
+
             .loading {
                 display: none;
                 text-align: center;
                 margin-top: 20px;
             }
-            
+
             .spinner {
                 border: 4px solid #333;
                 border-top: 4px solid #00ff00;
@@ -836,13 +836,13 @@ async def read_root():
                 margin: 0 auto;
                 box-shadow: 0 0 10px rgba(0,255,0,0.3);
             }
-            
+
             .loading p {
                 color: #00ff00;
                 margin-top: 15px;
                 font-weight: 500;
             }
-            
+
             @keyframes spin {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
@@ -855,41 +855,41 @@ async def read_root():
                 <h1>🛡️ ShieldScan 🛡️</h1>
                 <p>Sistema automatizado para escaneo de seguridad de sitios web con WordPress</p>
             </div>
-            
+
             <form id="auditForm">
                 <div class="form-group">
                     <label for="url">URL del sitio WordPress:</label>
                     <input type="url" id="url" name="url" placeholder="https://ejemplo.com" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="company">Nombre de la empresa (opcional):</label>
                     <input type="text" id="company" name="company" placeholder="Mi Empresa S.A.S.">
                 </div>
-                
+
                 <button type="submit" class="btn" id="auditBtn">
                     🚀 Iniciar Escaneo de Seguridad
                 </button>
             </form>
-            
+
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p>🔍 Escaneando vulnerabilidades...</p>
             </div>
         </div>
-        
+
         <script>
             document.getElementById('auditForm').addEventListener('submit', async function(e) {
                 e.preventDefault();
-                
+
                 const url = document.getElementById('url').value;
                 const company = document.getElementById('company').value;
                 const btn = document.getElementById('auditBtn');
                 const loading = document.getElementById('loading');
-                
+
                 btn.disabled = true;
                 loading.style.display = 'block';
-                
+
                 try {
                     const response = await fetch('/audit', {
                         method: 'POST',
@@ -901,7 +901,7 @@ async def read_root():
                             company_name: company
                         })
                     });
-                    
+
                     if (response.ok) {
                         const result = await response.json();
                         // Redirigir a la página de resultados
@@ -925,12 +925,12 @@ def calculate_section_score(checks: list, section_type: str) -> dict:
     """Calcula puntuación para una sección específica"""
     if not checks:
         return {'score': 0, 'status': 'ERROR', 'details': 'No hay verificaciones'}
-    
+
     total_score = 0
     critical_count = 0
     warning_count = 0
     pass_count = 0
-    
+
     for check in checks:
         if isinstance(check, dict) and 'status' in check:
             status = check['status']
@@ -954,11 +954,11 @@ def calculate_section_score(checks: list, section_type: str) -> dict:
             else:
                 total_score += 5
                 warning_count += 1
-    
+
     # Calcular puntuación promedio (0-10) - Solo contar items que contribuyen al score
     contributing_items = critical_count + warning_count + pass_count
     avg_score = total_score / contributing_items if contributing_items > 0 else 0
-    
+
     # Determinar estado de la sección
     if critical_count > 0:
         section_status = 'CRITICAL'
@@ -966,7 +966,7 @@ def calculate_section_score(checks: list, section_type: str) -> dict:
         section_status = 'WARNING'
     else:
         section_status = 'PASS'
-    
+
     return {
         'score': round(avg_score, 1),
         'status': section_status,
@@ -982,15 +982,15 @@ def calculate_overall_score(section_scores: dict) -> float:
     """Calcula puntuación general basada en secciones"""
     if not section_scores:
         return 0.0
-    
+
     total_score = 0
     section_count = 0
-    
+
     for section, score_data in section_scores.items():
         if isinstance(score_data, dict) and 'score' in score_data:
             total_score += score_data['score']
             section_count += 1
-    
+
     return round(total_score / section_count, 1) if section_count > 0 else 0.0
 
 def get_status_from_score(score: float) -> str:
@@ -1009,18 +1009,18 @@ async def perform_security_audit(request: SecurityAuditRequest):
         # Validar URL
         if not request.url.startswith(('http://', 'https://')):
             request.url = f"https://{request.url}"
-        
+
         async with WordPressSecurityChecker() as checker:
             # Obtener headers de seguridad
             response = await checker.session.get(request.url)
             headers = dict(response.headers)
-            
+
             # DETECCIÓN DE WORDPRESS (NUEVA FUNCIONALIDAD)
             wordpress_detection = await checker.detect_wordpress(request.url)
-            
+
             # Analizar headers de seguridad (siempre se hace)
             security_headers = SecurityHeaders.check_security_headers(headers)
-            
+
             # Compilar resultados base
             audit_results = {
                 'url': request.url,
@@ -1031,7 +1031,7 @@ async def perform_security_audit(request: SecurityAuditRequest):
                 'security_headers': security_headers,
                 'overall_status': 'PASS'  # Se calculará basado en los resultados
             }
-            
+
             # LÓGICA CONDICIONAL BASADA EN DETECCIÓN DE WORDPRESS
             if wordpress_detection['is_wordpress']:
                 # AUDITORÍA WORDPRESS
@@ -1042,9 +1042,9 @@ async def perform_security_audit(request: SecurityAuditRequest):
                     checker.check_directory_listing(request.url),
                     checker.check_ssl_configuration(request.url)
                 ]
-            
+
                 results = await asyncio.gather(*tasks)
-                
+
                 # Agregar resultados específicos de WordPress
                 audit_results.update({
                     'site_type': 'WordPress',
@@ -1061,9 +1061,9 @@ async def perform_security_audit(request: SecurityAuditRequest):
                     checker.check_directory_listing(request.url),
                     checker.check_ssl_configuration(request.url)
                 ]
-                
+
                 results = await asyncio.gather(*tasks)
-                
+
                 # Agregar resultados generales
                 audit_results.update({
                     'site_type': 'General Web Application',
@@ -1071,14 +1071,14 @@ async def perform_security_audit(request: SecurityAuditRequest):
                     'directory_listing': results[1],
                     'ssl_configuration': results[2]
                 })
-            
+
             # NUEVA LÓGICA: Evaluación por secciones (después de completar audit_data)
             section_scores = {}
-            
+
             # 1. Evaluación de Headers de Seguridad
             headers_score = calculate_section_score(list(security_headers.values()), 'headers')
             section_scores['security_headers'] = headers_score
-            
+
             # 2. Evaluación de WordPress (si aplica)
             if audit_results.get('site_type') == 'WordPress':
                 # Verificaciones específicas de WordPress
@@ -1089,7 +1089,7 @@ async def perform_security_audit(request: SecurityAuditRequest):
                 ]
                 wp_score = calculate_section_score(wp_checks, 'wordpress')
                 section_scores['wordpress'] = wp_score
-                
+
                 # Verificaciones generales (también aplican para WordPress)
                 general_checks = [
                     audit_results.get('directory_listing', {}),
@@ -1106,16 +1106,16 @@ async def perform_security_audit(request: SecurityAuditRequest):
                 ]
                 general_score = calculate_section_score(general_checks, 'general')
                 section_scores['general_security'] = general_score
-            
+
             # 3. Calcular estado general basado en secciones
             overall_score = calculate_overall_score(section_scores)
             audit_results['overall_status'] = get_status_from_score(overall_score)
             audit_results['section_scores'] = section_scores
             audit_results['overall_score'] = overall_score
-            
-            
+
+
             return audit_results
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error durante la auditoría: {str(e)}")
 
@@ -1130,7 +1130,7 @@ async def show_results(data: str):
 
 def generate_html_report(audit_data: Dict) -> str:
     """Genera reporte HTML profesional"""
-    
+
     # Determinar colores según el estado (tema oscuro)
     status_colors = {
         'PASS': '#00ff88',      # Verde brillante para PASS
@@ -1138,12 +1138,12 @@ def generate_html_report(audit_data: Dict) -> str:
         'CRITICAL': '#ff4444',  # Rojo brillante para CRITICAL
         'ERROR': '#888888'      # Gris para ERROR
     }
-    
+
     overall_color = status_colors.get(audit_data['overall_status'], '#6c757d')
-    
+
     # Generar fecha actual en español
     current_date = datetime.now().strftime('%d de %B de %Y').replace('October', 'Octubre').replace('January', 'Enero').replace('February', 'Febrero').replace('March', 'Marzo').replace('April', 'Abril').replace('May', 'Mayo').replace('June', 'Junio').replace('July', 'Julio').replace('August', 'Agosto').replace('September', 'Septiembre').replace('November', 'Noviembre').replace('December', 'Diciembre')
-    
+
     # Generar HTML del reporte
     html_content = f"""
     <!DOCTYPE html>
@@ -1158,7 +1158,7 @@ def generate_html_report(audit_data: Dict) -> str:
                 padding: 0;
                 box-sizing: border-box;
             }}
-            
+
             body {{
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 line-height: 1.6;
@@ -1166,7 +1166,7 @@ def generate_html_report(audit_data: Dict) -> str:
                 background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0d1117 100%);
                 min-height: 100vh;
             }}
-            
+
             .container {{
                 max-width: 1200px;
                 margin: 0 auto;
@@ -1176,14 +1176,14 @@ def generate_html_report(audit_data: Dict) -> str:
                 box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,255,0,0.1);
                 border-radius: 15px;
             }}
-            
+
             .header {{
                 text-align: center;
                 padding: 40px 0;
                 border-bottom: 3px solid {overall_color};
                 margin-bottom: 40px;
             }}
-            
+
             .header h1 {{
                 color: #00ff00;
                 font-size: 2.5em;
@@ -1191,14 +1191,14 @@ def generate_html_report(audit_data: Dict) -> str:
                 text-shadow: 0 0 15px rgba(0,255,0,0.5);
                 font-weight: 700;
             }}
-            
+
             .header .subtitle {{
                 color: #b0b0b0;
                 font-size: 1.2em;
                 margin-bottom: 20px;
                 font-weight: 300;
             }}
-            
+
             .status-badge {{
                 display: inline-block;
                 padding: 12px 25px;
@@ -1212,7 +1212,7 @@ def generate_html_report(audit_data: Dict) -> str:
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }}
-            
+
             .summary {{
                 background: linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%);
                 padding: 30px;
@@ -1222,13 +1222,13 @@ def generate_html_report(audit_data: Dict) -> str:
                 border: 1px solid #333;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             }}
-            
+
             .summary h2 {{
                 color: #00ff00;
                 margin-bottom: 15px;
                 font-weight: 600;
             }}
-            
+
             .section {{
                 margin-bottom: 40px;
                 padding: 30px;
@@ -1237,7 +1237,7 @@ def generate_html_report(audit_data: Dict) -> str:
                 background: linear-gradient(145deg, #1e1e1e 0%, #2d2d2d 100%);
                 box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             }}
-            
+
             .section h3 {{
                 color: #00ff00;
                 margin-bottom: 20px;
@@ -1245,7 +1245,7 @@ def generate_html_report(audit_data: Dict) -> str:
                 border-bottom: 2px solid #333;
                 font-weight: 600;
             }}
-            
+
             .section-score {{
                 font-size: 0.8em;
                 font-weight: normal;
@@ -1256,7 +1256,7 @@ def generate_html_report(audit_data: Dict) -> str:
                 border: 1px solid #00ff88;
                 margin-left: 10px;
             }}
-            
+
             .check-item {{
                 display: flex;
                 justify-content: space-between;
@@ -1268,38 +1268,38 @@ def generate_html_report(audit_data: Dict) -> str:
                 border: 1px solid #333;
                 transition: all 0.3s ease;
             }}
-            
+
             .check-item:hover {{
                 background: linear-gradient(145deg, #2a2a2a 0%, #3a3a3a 100%);
                 border-color: #555;
             }}
-            
+
             .check-name {{
                 font-weight: 600;
                 color: #e0e0e0;
             }}
-            
+
             .check-status {{
                 padding: 5px 15px;
                 border-radius: 20px;
                 font-weight: bold;
                 font-size: 0.9em;
             }}
-            
+
             .status-pass {{
                 background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
                 color: #000000;
                 box-shadow: 0 0 15px rgba(0,255,136,0.3);
                 border: 1px solid #00ff88;
             }}
-            
+
             .status-warning {{
                 background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%);
                 color: #000000;
                 box-shadow: 0 0 15px rgba(255,140,0,0.3);
                 border: 1px solid #ff8c00;
             }}
-            
+
             .status-critical {{
                 background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
                 color: #ffffff;
@@ -1307,20 +1307,20 @@ def generate_html_report(audit_data: Dict) -> str:
                 border: 1px solid #ff4444;
                 animation: pulse 2s infinite;
             }}
-            
+
             .status-error {{
                 background: linear-gradient(135deg, #888888 0%, #666666 100%);
                 color: #ffffff;
                 box-shadow: 0 0 10px rgba(136,136,136,0.3);
                 border: 1px solid #888888;
             }}
-            
+
             @keyframes pulse {{
                 0% {{ box-shadow: 0 0 15px rgba(255,68,68,0.4); }}
                 50% {{ box-shadow: 0 0 25px rgba(255,68,68,0.6); }}
                 100% {{ box-shadow: 0 0 15px rgba(255,68,68,0.4); }}
             }}
-            
+
             .recommendations {{
                 background: linear-gradient(145deg, #1a1a2e 0%, #2a2a3e 100%);
                 padding: 20px;
@@ -1329,13 +1329,13 @@ def generate_html_report(audit_data: Dict) -> str:
                 border: 1px solid #333;
                 box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             }}
-            
+
             .recommendations h4 {{
                 color: #00ff00;
                 margin-bottom: 10px;
                 font-weight: 600;
             }}
-            
+
             .footer {{
                 text-align: center;
                 padding: 40px 0;
@@ -1343,13 +1343,13 @@ def generate_html_report(audit_data: Dict) -> str:
                 margin-top: 40px;
                 color: #b0b0b0;
             }}
-            
+
             .footer .signature {{
                 margin-top: 20px;
                 font-weight: bold;
                 color: #00ff00;
             }}
-            
+
             .print-btn {{
                 position: fixed;
                 top: 20px;
@@ -1366,35 +1366,35 @@ def generate_html_report(audit_data: Dict) -> str:
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }}
-            
+
             .print-btn:hover {{
                 transform: translateY(-2px);
                 box-shadow: 0 8px 25px rgba(0,255,0,0.4);
                 background: linear-gradient(135deg, #00ff00 0%, #00ff00 100%);
             }}
-            
+
             @media print {{
                 .print-btn {{
                     display: none;
                 }}
-                
+
                 body {{
                     background: #0a0a0a !important;
                     color: #e0e0e0 !important;
                 }}
-                
+
                 .container {{
                     box-shadow: none;
                     margin: 0;
                     padding: 0;
                     background: #1e1e1e !important;
                 }}
-                
+
                 .section {{
                     background: #2d2d2d !important;
                     border: 1px solid #333 !important;
                 }}
-                
+
                 .check-item {{
                     background: #1a1a1a !important;
                     border: 1px solid #333 !important;
@@ -1404,7 +1404,7 @@ def generate_html_report(audit_data: Dict) -> str:
     </head>
     <body>
         <button class="print-btn" onclick="window.print()">🖨️ Imprimir PDF</button>
-        
+
         <div class="container">
             <div class="header">
                 <h1>🔒 Reporte de Auditoría de Seguridad</h1>
@@ -1412,20 +1412,20 @@ def generate_html_report(audit_data: Dict) -> str:
                 <div class="subtitle">Cliente: {sanitize_html(audit_data['company_name'])}</div>
                 <div class="status-badge">Estado: {sanitize_html(audit_data['overall_status'])}</div>
             </div>
-            
+
             <div class="summary">
                 <h2>📋 Resumen Ejecutivo</h2>
-                <p>Se ha realizado una auditoría de seguridad completa para el sitio <strong>{sanitize_html(audit_data['url'])}</strong> 
-                con el fin de identificar vulnerabilidades y mejorar la postura de seguridad del sitio web. 
-                Este análisis incluye la verificación de headers de seguridad, configuración de WordPress, 
+                <p>Se ha realizado una auditoría de seguridad completa para el sitio <strong>{sanitize_html(audit_data['url'])}</strong>
+                con el fin de identificar vulnerabilidades y mejorar la postura de seguridad del sitio web.
+                Este análisis incluye la verificación de headers de seguridad, configuración de WordPress,
                 y mejores prácticas de seguridad web.</p>
-                
+
                 <p><strong>Fecha de auditoría:</strong> {datetime.fromisoformat(audit_data['timestamp']).strftime('%d de %B de %Y').replace('October', 'Octubre').replace('January', 'Enero').replace('February', 'Febrero').replace('March', 'Marzo').replace('April', 'Abril').replace('May', 'Mayo').replace('June', 'Junio').replace('July', 'Julio').replace('August', 'Agosto').replace('September', 'Septiembre').replace('November', 'Noviembre').replace('December', 'Diciembre')}</p>
                 <p><strong>Estado general:</strong> <span style="color: {overall_color}; font-weight: bold;">{audit_data['overall_status']}</span></p>
                 <p><strong>Puntuación general:</strong> <span style="color: {overall_color}; font-weight: bold;">{audit_data.get('overall_score', 0)}/10</span></p>
             </div>
     """
-    
+
     # Sección de Detección de WordPress
     if 'wordpress_detection' in audit_data:
         wp_detection = audit_data['wordpress_detection']
@@ -1437,7 +1437,7 @@ def generate_html_report(audit_data: Dict) -> str:
             detection_status_text = 'ℹ️ NO WORDPRESS'
         elif wp_detection['status'] == 'ERROR':
             detection_status_text = '❌ ERROR'
-        
+
         html_content += f"""
             <div class="section">
                 <h3>🔍 Detección de WordPress</h3>
@@ -1451,7 +1451,7 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {detection_status_class}">{detection_status_text}</div>
                 </div>
         """
-        
+
         # Mostrar indicadores de detección solo si está habilitado en configuración
         from config import Config
         if Config.SHOW_WP_DETECTION_INDICATORS and wp_detection.get('indicators'):
@@ -1464,26 +1464,26 @@ def generate_html_report(audit_data: Dict) -> str:
                 status_icon = "✅" if value else "❌"
                 indicator_name = indicator.replace('_', ' ').title()
                 html_content += f"<li>{status_icon} {indicator_name}: {'Detectado' if value else 'No detectado'}</li>"
-            
+
             html_content += """
                     </ul>
                 </div>
         """
-        
+
         html_content += """
             </div>
     """
-    
+
     # Sección de Headers de Seguridad
     headers_score = audit_data.get('section_scores', {}).get('security_headers', {})
     headers_score_value = headers_score.get('score', 0)
     headers_status = headers_score.get('status', 'UNKNOWN')
-    
+
     html_content += f"""
             <div class="section">
                 <h3>🛡️ Headers de Seguridad <span class="section-score">({headers_score_value}/10 - {headers_status})</span></h3>
     """
-    
+
     for header, data in audit_data['security_headers'].items():
         status_class = f"status-{data['status'].lower()}"
         html_content += f"""
@@ -1498,17 +1498,17 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {status_class}">{data['status']}</div>
                 </div>
     """
-    
+
     # Sección de Verificaciones (condicional según tipo de sitio)
     if audit_data.get('site_type') == 'WordPress':
         # Obtener puntuación de verificaciones WordPress
         wp_score = audit_data.get('section_scores', {}).get('wordpress', {})
         wp_score_value = wp_score.get('score', 0)
         wp_status = wp_score.get('status', 'UNKNOWN')
-        
+
         html_content += f"""
                 </div>
-                
+
                 <div class="section">
                     <h3>🔧 Verificaciones de WordPress <span class="section-score">({wp_score_value}/10 - {wp_status})</span></h3>
         """
@@ -1517,14 +1517,14 @@ def generate_html_report(audit_data: Dict) -> str:
         general_score = audit_data.get('section_scores', {}).get('general_security', {})
         general_score_value = general_score.get('score', 0)
         general_status = general_score.get('status', 'UNKNOWN')
-        
+
         html_content += f"""
             </div>
-            
+
             <div class="section">
                 <h3>🌐 Verificaciones Generales de Seguridad <span class="section-score">({general_score_value}/10 - {general_status})</span></h3>
         """
-    
+
     # wp-admin access (solo si es WordPress)
     if audit_data.get('site_type') == 'WordPress' and 'wp_admin_access' in audit_data:
         wp_admin = audit_data['wp_admin_access']
@@ -1542,7 +1542,7 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {status_class}">{wp_admin['status']}</div>
                 </div>
     """
-    
+
     # xmlrpc access
     # xmlrpc.php access (solo si es WordPress)
     if audit_data.get('site_type') == 'WordPress' and 'xmlrpc_access' in audit_data:
@@ -1561,7 +1561,7 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {status_class}">{xmlrpc['status']}</div>
                 </div>
     """
-    
+
     # wp-config exposure
     # wp-config.php exposure (solo si es WordPress)
     if audit_data.get('site_type') == 'WordPress' and 'wp_config_exposure' in audit_data:
@@ -1580,7 +1580,7 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {status_class}">{wp_config['status']}</div>
                 </div>
     """
-    
+
     # Directory listing
     dir_listing = audit_data['directory_listing']
     status_class = f"status-{dir_listing['status'].lower()}"
@@ -1597,7 +1597,7 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {status_class}">{dir_listing['status']}</div>
                 </div>
     """
-    
+
     # SSL configuration
     ssl = audit_data['ssl_configuration']
     status_class = f"status-{ssl['status'].lower()}"
@@ -1614,7 +1614,7 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {status_class}">{ssl['status']}</div>
                 </div>
     """
-    
+
     # Verificaciones generales (solo si NO es WordPress)
     if audit_data.get('site_type') != 'WordPress' and 'general_security' in audit_data:
         general_security = audit_data['general_security']
@@ -1635,11 +1635,11 @@ def generate_html_report(audit_data: Dict) -> str:
                     <div class="check-status {status_class}">{general_security['status']}</div>
                 </div>
     """
-    
+
     # Recomendaciones generales
     html_content += """
             </div>
-            
+
             <div class="section">
                 <h3>💡 Recomendaciones Generales</h3>
                 <div class="recommendations">
@@ -1658,18 +1658,18 @@ def generate_html_report(audit_data: Dict) -> str:
                     </ul>
                 </div>
             </div>
-            
+
             <div class="section">
                 <h3>📊 Conclusiones</h3>
-                <p>Esta auditoría de seguridad ha identificado varios aspectos importantes para mejorar la seguridad del sitio web. 
-                Se recomienda implementar las correcciones sugeridas de manera prioritaria, comenzando por los elementos 
+                <p>Esta auditoría de seguridad ha identificado varios aspectos importantes para mejorar la seguridad del sitio web.
+                Se recomienda implementar las correcciones sugeridas de manera prioritaria, comenzando por los elementos
                 marcados como CRÍTICOS y WARNING.</p>
-                
-                <p>Es importante realizar auditorías de seguridad de manera regular y mantener el sitio web actualizado 
+
+                <p>Es importante realizar auditorías de seguridad de manera regular y mantener el sitio web actualizado
                 con las últimas versiones de WordPress, temas y plugins.</p>
             </div>
         </div>
-        
+
         <div class="footer">
             <p><strong>Versión:</strong> 1.1.0</p>
             <p><strong>Ciudad:</strong> Bogotá, Colombia</p>
@@ -1677,7 +1677,7 @@ def generate_html_report(audit_data: Dict) -> str:
                 <p>ArthurTech - Equipo de Seguridad y Operaciones</p>
             </div>
         </div>
-        
+
         <script>
             // Auto-scroll to top when page loads
             window.onload = function() {
@@ -1687,7 +1687,7 @@ def generate_html_report(audit_data: Dict) -> str:
     </body>
     </html>
     """
-    
+
     return html_content
 
 if __name__ == "__main__":
