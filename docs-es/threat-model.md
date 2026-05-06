@@ -57,7 +57,7 @@ ShieldScan es un auditor de seguridad web con arquitectura de microservicios. Es
 | S3 | Worker | Worker malicioso suplantando al legítimo | Redis en red interna (no expuesto), sin autenticación externa |
 
 **Mitigaciones implementadas:**
-- Contraseñas hasheadas con bcrypt (passlib)
+- Contraseñas hasheadas con bcrypt
 - JWT con expiración configurable
 - Redis y PostgreSQL solo accesibles dentro de la red Docker interna
 
@@ -118,7 +118,7 @@ ShieldScan es un auditor de seguridad web con arquitectura de microservicios. Es
 ## 6. Controles de Seguridad Implementados
 
 1. **Autenticación**: JWT con HS256, expiración 24h, roles (user/admin)
-2. **Contraseñas**: bcrypt via passlib con factor de costo seguro
+2. **Contraseñas**: bcrypt con factor de costo seguro
 3. **Inyección SQL**: SQLAlchemy ORM, sin queries manuales con concatenación
 4. **XSS**: Sanitización html.escape() en reportes generados
 5. **Contenedores**: Usuario no-root en todos los Dockerfiles
