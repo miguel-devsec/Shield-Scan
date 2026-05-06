@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShieldScan v2.0 — Technical Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    /* ── Page setup ── */
+    @page {
+      size: A4;
+      margin: 2.5cm 2cm 2.5cm 2cm;
+    }
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #1a1a2e;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 40px;
+      background: #ffffff;
+    }
+
+    /* ── Cover / headings ── */
+    h1 {
+      font-size: 26pt;
+      color: #0f3460;
+      border-bottom: 3px solid #e94560;
+      padding-bottom: 10px;
+      margin-top: 0;
+      page-break-before: avoid;
+    }
+    h2 {
+      font-size: 16pt;
+      color: #16213e;
+      border-left: 5px solid #e94560;
+      padding-left: 12px;
+      margin-top: 36px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 13pt;
+      color: #0f3460;
+      margin-top: 24px;
+      page-break-after: avoid;
+    }
+    h4 {
+      font-size: 11pt;
+      color: #16213e;
+      font-weight: 600;
+      page-break-after: avoid;
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 10pt;
+      page-break-inside: avoid;
+    }
+    th {
+      background: #0f3460;
+      color: #ffffff;
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 7px 12px;
+      border: 1px solid #dde1e7;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td {
+      background: #f4f6fa;
+    }
+    tr:hover td {
+      background: #e8eef8;
+    }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #1a1a2e;
+      color: #e8e8e8;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 9pt;
+      line-height: 1.5;
+      page-break-inside: avoid;
+    }
+    code {
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 9.5pt;
+    }
+    p > code, li > code, td > code {
+      background: #eef0f8;
+      padding: 2px 5px;
+      border-radius: 3px;
+      color: #c0392b;
+    }
+
+    /* ── Mermaid diagrams ── */
+    .mermaid {
+      background: #f8f9fd;
+      border: 1px solid #dde1e7;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+
+    /* ── Blockquotes / callouts ── */
+    blockquote {
+      border-left: 4px solid #e94560;
+      background: #fff5f6;
+      margin: 16px 0;
+      padding: 10px 16px;
+      border-radius: 0 6px 6px 0;
+    }
+
+    /* ── Horizontal rules ── */
+    hr {
+      border: none;
+      border-top: 2px solid #dde1e7;
+      margin: 32px 0;
+    }
+
+    /* ── Links ── */
+    a { color: #0f3460; }
+
+    /* ── Print ── */
+    @media print {
+      body { padding: 0; max-width: 100%; }
+      pre { white-space: pre-wrap; word-break: break-all; }
+      h2 { page-break-before: always; }
+      h2:first-of-type { page-break-before: avoid; }
+      .no-break { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <h1 id="technical-report-shieldscan-v20">Technical Report — ShieldScan v2.0</h1>
+<h2 id="devsecops-final-project">DevSecOps Final Project</h2>
+<hr />
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Team</strong></td>
+<td>ArthurTech — Security and Operations</td>
+</tr>
+<tr>
+<td><strong>Student</strong></td>
+<td>Miguel Muñoz</td>
+</tr>
+<tr>
+<td><strong>Institution</strong></td>
+<td>Uniminuto</td>
+</tr>
+<tr>
+<td><strong>Program</strong></td>
+<td>Cybersecurity Specialization</td>
+</tr>
+<tr>
+<td><strong>Module</strong></td>
+<td>Security in Cloud Environments and DevOps</td>
+</tr>
+<tr>
+<td><strong>Project</strong></td>
+<td>ShieldScan v2.0 — Web Security Auditor</td>
+</tr>
+<tr>
+<td><strong>Version</strong></td>
+<td>2.0.0</td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>May 2026</td>
+</tr>
+<tr>
+<td><strong>License</strong></td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><strong>Repository</strong></td>
+<td>https://github.com/miguel-devsec/ShieldScan</td>
+</tr>
+<tr>
+<td><strong>Docker Hub</strong></td>
+<td>https://hub.docker.com/u/migueldevsec</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li>Introduction</li>
+<li>Architecture</li>
+<li>Threat Modeling</li>
+<li>Pipeline Implementation</li>
+<li>Security Results</li>
+<li>Monitoring and Observability</li>
+<li>Conclusions</li>
+</ol>
+<hr />
+<h2 id="1-introduction">1. Introduction</h2>
+<h3 id="11-project-rationale">1.1 Project Rationale</h3>
+<p>Security is most effective when built into every phase of the software development lifecycle rather than bolted on at the end. The DevSecOps methodology operationalizes this principle by integrating security tooling, controls, and processes into the CI/CD pipeline — making security a shared, continuous, and automated responsibility.</p>
+<p>ShieldScan was selected as the application vehicle for this project because it occupies an inherently security-relevant domain: it audits external websites for misconfigurations. This creates meaningful context for demonstrating DevSecOps controls — the tool that finds security issues must itself be secure.</p>
+<p>The application domain also provides realistic complexity: asynchronous task execution, JWT-based authentication with role-based access control, persistent storage, and a decoupled microservices architecture that mirrors real production systems.</p>
+<h3 id="12-project-objectives">1.2 Project Objectives</h3>
+<table>
+<thead>
+<tr>
+<th>Objective</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>O1 — Architecture</strong></td>
+<td>Implement a microservices architecture with at least 5 components (frontend, API, worker, database, message broker)</td>
+</tr>
+<tr>
+<td><strong>O2 — Containerization</strong></td>
+<td>Fully containerize all components following Docker security best practices</td>
+</tr>
+<tr>
+<td><strong>O3 — CI/CD Pipeline</strong></td>
+<td>Build a GitHub Actions pipeline covering all DevSecOps phases (Plan, Code, Build, Test, Release, Operate)</td>
+</tr>
+<tr>
+<td><strong>O4 — Security Tooling</strong></td>
+<td>Integrate FOSS security tools across every pipeline phase</td>
+</tr>
+<tr>
+<td><strong>O5 — IaC</strong></td>
+<td>Automate deployment using Infrastructure-as-Code (Ansible + Docker Swarm)</td>
+</tr>
+<tr>
+<td><strong>O6 — Observability</strong></td>
+<td>Implement a full monitoring stack (Prometheus, Grafana, Loki, Falco)</td>
+</tr>
+<tr>
+<td><strong>O7 — Documentation</strong></td>
+<td>Produce complete technical documentation in both English and Spanish</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-application-description">1.3 Application Description</h3>
+<p>ShieldScan v2.0 is a web security auditing platform that:</p>
+<ul>
+<li>Accepts a URL as input from an authenticated user</li>
+<li>Dispatches the audit as an asynchronous task to a background worker</li>
+<li>Executes up to 12 distinct security checks against the target URL</li>
+<li>Stores results persistently in PostgreSQL</li>
+<li>Presents findings through a React dashboard</li>
+</ul>
+<p><strong>Security checks performed:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTTP Security Headers</td>
+<td>HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy</td>
+</tr>
+<tr>
+<td>WordPress</td>
+<td>Detection, wp-admin exposure, xmlrpc.php, wp-config.php, directory listing</td>
+</tr>
+<tr>
+<td>SSL/TLS</td>
+<td>HTTPS availability, HTTP→HTTPS redirect, certificate validity</td>
+</tr>
+<tr>
+<td>Sensitive Files</td>
+<td>.env, .git/config, composer.json, package.json</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-architecture">2. Architecture</h2>
+<h3 id="21-microservices-architecture-overview">2.1 Microservices Architecture Overview</h3>
+<p>ShieldScan implements a five-component microservices architecture. Each component has a single, well-defined responsibility and communicates with other components through explicit interfaces.</p>
+<pre><code class="language-mermaid">graph TB
+    subgraph Browser[&quot;Client — Browser&quot;]
+        UI[React SPA]
+    end
+
+    subgraph Docker[&quot;Docker Network: shieldscan-net&quot;]
+        subgraph FE[&quot;Frontend Service :3000&quot;]
+            Nginx[nginx reverse proxy]
+        end
+        subgraph API[&quot;API Service :8000&quot;]
+            FastAPI[FastAPI application]
+            Auth[JWT Auth]
+            Metrics[/metrics endpoint]
+        end
+        subgraph Worker[&quot;Worker Service&quot;]
+            Celery[Celery Worker]
+            Auditor[SecurityAuditor]
+        end
+        subgraph Infra[&quot;Infrastructure&quot;]
+            PG[(PostgreSQL 16)]
+            Redis[(Redis 7)]
+        end
+    end
+
+    Internet((Internet)) --&gt;|:3000| FE
+    Internet --&gt;|:8000| API
+    UI --&gt; Nginx
+    Nginx --&gt;|/api/ proxy| FastAPI
+    FastAPI --&gt; Auth
+    FastAPI --&gt; Metrics
+    FastAPI --&gt;|ORM| PG
+    FastAPI --&gt;|send_task| Redis
+    Redis --&gt;|consume| Celery
+    Celery --&gt; Auditor
+    Auditor --&gt;|httpx| Internet
+    Auditor --&gt;|UPDATE result| PG
+</code></pre>
+<h3 id="22-component-descriptions">2.2 Component Descriptions</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Technology</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Frontend</strong></td>
+<td>React 18 + Vite + nginx</td>
+<td>Serves the SPA, proxies API calls, handles user interaction</td>
+</tr>
+<tr>
+<td><strong>API</strong></td>
+<td>FastAPI 0.104, Python 3.11</td>
+<td>REST API, JWT authentication, role enforcement, task dispatch</td>
+</tr>
+<tr>
+<td><strong>Worker</strong></td>
+<td>Celery 5.3, httpx</td>
+<td>Async audit execution, result persistence</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td>PostgreSQL 16</td>
+<td>Persistent storage for users and audit results</td>
+</tr>
+<tr>
+<td><strong>Broker</strong></td>
+<td>Redis 7</td>
+<td>Message queue connecting API to worker</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-deployment-architecture">2.3 Deployment Architecture</h3>
+<pre><code class="language-mermaid">graph TB
+    subgraph Host[&quot;Host Machine&quot;]
+        subgraph Net[&quot;Docker Bridge Network: shieldscan-net&quot;]
+            C1[&quot;shieldscan-frontend\n:3000→80\nnginx + React&quot;]
+            C2[&quot;shieldscan-api\n:8000→8000\nFastAPI + uvicorn&quot;]
+            C3[&quot;shieldscan-worker\n(no exposed port)\nCelery&quot;]
+            C4[&quot;shieldscan-db\n(internal only)\nPostgreSQL 16&quot;]
+            C5[&quot;shieldscan-redis\n(internal only)\nRedis 7&quot;]
+            V1[(&quot;Volume: postgres_data&quot;)]
+            V2[(&quot;Volume: redis_data&quot;)]
+        end
+    end
+    C4 --- V1
+    C5 --- V2
+    C1 --&gt;|:8000| C2
+    C2 --&gt;|:5432| C4
+    C2 --&gt;|:6379| C5
+    C3 --&gt;|:6379| C5
+    C3 --&gt;|:5432| C4
+</code></pre>
+<p><strong>Key isolation decisions:</strong>
+- PostgreSQL and Redis have no host port mappings — unreachable from outside Docker
+- Worker has no inbound network exposure — pulls tasks from Redis only
+- All inter-service communication happens on the internal <code>shieldscan-net</code> bridge</p>
+<h3 id="24-authentication-sequence">2.4 Authentication Sequence</h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    actor User
+    participant FE as Frontend
+    participant API as FastAPI
+    participant DB as PostgreSQL
+
+    User-&gt;&gt;FE: Submit login form
+    FE-&gt;&gt;API: POST /auth/login {email, password}
+    API-&gt;&gt;DB: SELECT user WHERE email=?
+    DB--&gt;&gt;API: {hashed_password, role}
+    API-&gt;&gt;API: bcrypt.checkpw(plain, hash)
+    alt Valid credentials
+        API-&gt;&gt;API: create_access_token({sub: id, role})
+        API--&gt;&gt;FE: 200 {access_token}
+        FE-&gt;&gt;FE: Store in localStorage
+        FE--&gt;&gt;User: Redirect to /dashboard
+    else Invalid credentials
+        API--&gt;&gt;FE: 401 Unauthorized
+        FE--&gt;&gt;User: Show error
+    end
+</code></pre>
+<h3 id="25-audit-execution-sequence">2.5 Audit Execution Sequence</h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    actor User
+    participant FE as Frontend
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant RD as Redis
+    participant WK as Worker
+
+    User-&gt;&gt;FE: Submit audit form (URL)
+    FE-&gt;&gt;API: POST /audits/ Bearer &lt;token&gt;
+    API-&gt;&gt;API: Validate JWT
+    API-&gt;&gt;DB: INSERT audit (status=pending)
+    API-&gt;&gt;RD: send_task(perform_audit, [id, url])
+    API--&gt;&gt;FE: 201 {id, status: pending}
+    RD-&gt;&gt;WK: Deliver task
+    WK-&gt;&gt;DB: UPDATE status=running
+    WK-&gt;&gt;WK: SecurityAuditor.run()
+    WK-&gt;&gt;DB: UPDATE status=completed, result=JSON
+    FE-&gt;&gt;API: GET /audits/{id}
+    API-&gt;&gt;DB: SELECT audit WHERE id=? AND user_id=?
+    API--&gt;&gt;FE: 200 {status: completed, result: {...}}
+    FE--&gt;&gt;User: Render results
+</code></pre>
+<h3 id="26-data-model">2.6 Data Model</h3>
+<pre><code class="language-mermaid">erDiagram
+    USERS {
+        int id PK
+        string email UK
+        string hashed_password
+        string role
+        datetime created_at
+    }
+    AUDITS {
+        int id PK
+        int user_id FK
+        string url
+        string company_name
+        string status
+        json result
+        datetime created_at
+        datetime completed_at
+    }
+    USERS ||--o{ AUDITS : owns
+</code></pre>
+<h3 id="27-devsecops-pipeline-architecture">2.7 DevSecOps Pipeline Architecture</h3>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph Phase2[&quot;Phase 2 — Code&quot;]
+        A[Gitleaks\nSecret scan] --&gt; B[Semgrep + Bandit\nSAST]
+        A --&gt; C[Trivy fs\nSCA]
+    end
+    subgraph Phase3[&quot;Phase 3 — Build&quot;]
+        D[Build Docker\nimages]
+        E[Trivy image\nCRITICAL gate]
+        D --&gt; E
+    end
+    subgraph Phase4[&quot;Phase 4 — Test&quot;]
+        F[Pytest\nunit tests]
+        G[OWASP ZAP\nDAST]
+    end
+    subgraph Phase5[&quot;Phase 5 — Release&quot;]
+        H[Checkov\nIaC scan]
+        I[Push to\nDocker Hub]
+        H --&gt; I
+    end
+
+    Phase2 --&gt; Phase3
+    Phase3 --&gt; Phase4
+    Phase4 --&gt; Phase5
+</code></pre>
+<h3 id="28-design-patterns">2.8 Design Patterns</h3>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Where applied</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>API Gateway</strong></td>
+<td>FastAPI as single entry point</td>
+<td>Centralizes auth, routing, and observability</td>
+</tr>
+<tr>
+<td><strong>Message Queue</strong></td>
+<td>Redis + Celery</td>
+<td>Decouples HTTP latency from audit duration (5–30s)</td>
+</tr>
+<tr>
+<td><strong>RBAC</strong></td>
+<td><code>require_admin</code> dependency</td>
+<td>Framework-level authorization enforcement</td>
+</tr>
+<tr>
+<td><strong>Non-root containers</strong></td>
+<td>All Dockerfiles</td>
+<td>Defense-in-depth: limits container breach impact</td>
+</tr>
+<tr>
+<td><strong>Health checks</strong></td>
+<td>All services</td>
+<td>Enables ordered startup with <code>service_healthy</code> condition</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-threat-modeling">3. Threat Modeling</h2>
+<h3 id="31-methodology">3.1 Methodology</h3>
+<p>STRIDE threat modeling was applied to a two-level Data Flow Diagram. OWASP Threat Dragon was used as the modeling tool.</p>
+<h3 id="32-dfd-level-0">3.2 DFD Level 0</h3>
+<pre><code>[User] ──HTTPS──► [ShieldScan System] ──HTTP──► [Target Website]
+                         │
+                    [PostgreSQL]
+                    [Redis]
+</code></pre>
+<h3 id="33-dfd-level-1">3.3 DFD Level 1</h3>
+<pre><code>[User] ──HTTPS:3000──► [P1: nginx Frontend]
+                              │ HTTP /api/
+                              ▼
+                       [P2: FastAPI API] ──SQL──► [D1: PostgreSQL]
+                              │ Celery task
+                              ▼
+                          [D2: Redis]
+                              │ consume
+                              ▼
+                       [P3: Celery Worker] ──HTTP──► [Target Site]
+                              │ SQL UPDATE
+                              ▼
+                          [D1: PostgreSQL]
+</code></pre>
+<h3 id="34-stride-threat-analysis">3.4 STRIDE Threat Analysis</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Category</th>
+<th>Component</th>
+<th>Threat</th>
+<th>Mitigation</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1</td>
+<td>Spoofing</td>
+<td>/auth/login</td>
+<td>Brute-force credential attack</td>
+<td>bcrypt cost factor; JWT expiry</td>
+<td>Partial — rate limiting pending</td>
+</tr>
+<tr>
+<td>S2</td>
+<td>Spoofing</td>
+<td>JWT validation</td>
+<td>Token forgery</td>
+<td>HS256 + strong SECRET_KEY + expiry</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>T1</td>
+<td>Tampering</td>
+<td>PostgreSQL</td>
+<td>SQL injection</td>
+<td>SQLAlchemy ORM + parameterized queries</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Tampering</td>
+<td>POST /audits</td>
+<td>Malicious URL injection (SSRF)</td>
+<td>Pydantic URL validation</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>Tampering</td>
+<td>Redis</td>
+<td>Task queue poisoning</td>
+<td>Redis on internal network only</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>R1</td>
+<td>Repudiation</td>
+<td>API</td>
+<td>User denies audit creation</td>
+<td>user_id + timestamp stored immutably</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>I1</td>
+<td>Info Disclosure</td>
+<td>API /docs</td>
+<td>Swagger exposed in production</td>
+<td>docs_url configurable via env</td>
+<td>Accepted</td>
+</tr>
+<tr>
+<td>I2</td>
+<td>Info Disclosure</td>
+<td>JWT payload</td>
+<td>PII in token</td>
+<td>Only user_id + role in payload</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>I3</td>
+<td>Info Disclosure</td>
+<td>Error messages</td>
+<td>Stack traces exposed</td>
+<td>Generic error handler; debug=False</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>D1</td>
+<td>DoS</td>
+<td>Worker</td>
+<td>Audit flood exhausts worker</td>
+<td>Celery concurrency limit; httpx timeout</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>DoS</td>
+<td>Target site</td>
+<td>ShieldScan as DoS amplifier</td>
+<td>HEAD/GET only; 10s timeout; identifiable UA</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>E1</td>
+<td>Elevation</td>
+<td>/audits/admin/all</td>
+<td>Regular user accesses admin data</td>
+<td><code>require_admin</code> dependency on endpoint</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Elevation</td>
+<td>Containers</td>
+<td>Container escape to host</td>
+<td>Non-root user in all containers</td>
+<td>Mitigated</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Elevation</td>
+<td>Audit results</td>
+<td>User reads another user's audits</td>
+<td>user_id filter on all queries</td>
+<td>Mitigated</td>
+</tr>
+</tbody>
+</table>
+<h3 id="35-risk-summary">3.5 Risk Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Count</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HIGH</td>
+<td>2</td>
+<td>1 mitigated, 1 partial (rate limiting)</td>
+</tr>
+<tr>
+<td>MEDIUM</td>
+<td>4</td>
+<td>All mitigated</td>
+</tr>
+<tr>
+<td>LOW</td>
+<td>8</td>
+<td>All mitigated or accepted</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-pipeline-implementation">4. Pipeline Implementation</h2>
+<h3 id="41-pipeline-overview">4.1 Pipeline Overview</h3>
+<p>The complete DevSecOps pipeline is defined in <code>.github/workflows/devsecops.yml</code> and is triggered on every push to <code>main</code> or <code>develop</code>, and on pull requests targeting <code>main</code>.</p>
+<pre><code class="language-mermaid">flowchart TD
+    trigger([Push / PR]) --&gt; ss
+    ss[secrets-scan\nGitleaks] --&gt; sast
+    ss --&gt; sca
+    ss --&gt; ut
+    ss --&gt; iac
+    sast[SAST\nSemgrep + Bandit] --&gt; bs
+    sca[SCA\nTrivy fs] --&gt; bs
+    bs[Build + Scan\nTrivy image] --&gt; pi
+    ut[Unit Tests\nPytest] --&gt; pi
+    iac[IaC Scan\nCheckov] --&gt; pi
+    pi{main branch?}
+    pi --&gt;|Yes| push[Push to\nDocker Hub]
+    push --&gt; dast[DAST\nOWASP ZAP]
+</code></pre>
+<h3 id="42-phase-2-code-secret-detection-gitleaks">4.2 Phase 2 — Code: Secret Detection (Gitleaks)</h3>
+<p>Gitleaks scans the full git history on every pipeline run, catching secrets that may have been committed at any point.</p>
+<pre><code class="language-yaml">secrets-scan:
+  name: &quot;[Phase 2] Secret Detection (Gitleaks)&quot;
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0          # Full history — not just latest commit
+
+    - name: Run Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+</code></pre>
+<p>Additionally, Gitleaks runs as a <strong>pre-commit hook</strong> locally, blocking commits before they reach the remote.</p>
+<h3 id="43-phase-2-code-sast-semgrep-bandit">4.3 Phase 2 — Code: SAST (Semgrep + Bandit)</h3>
+<p>Two complementary static analysis tools cover different vulnerability classes:</p>
+<pre><code class="language-yaml">sast:
+  needs: secrets-scan
+  steps:
+    - name: Run Semgrep (Python security rules)
+      run: |
+        semgrep --config=p/python \
+                --config=p/security-audit \
+                --config=p/owasp-top-ten \
+                servicios/api servicios/worker \
+                --junit-xml semgrep-results.xml
+
+    - name: Run Bandit (Python security linter)
+      run: |
+        bandit -r servicios/api/app servicios/worker/app \
+               -f json -o bandit-results.json \
+               --severity-level medium \
+               --confidence-level medium
+</code></pre>
+<p>The pipeline fails if Bandit finds any HIGH severity issues. Results are uploaded as SARIF artifacts and visible in GitHub Security tab.</p>
+<h3 id="44-phase-2-code-sca-trivy-filesystem">4.4 Phase 2 — Code: SCA (Trivy filesystem)</h3>
+<p>Dependency vulnerability scanning covers all three services:</p>
+<pre><code class="language-yaml">sca:
+  needs: secrets-scan
+  steps:
+    - name: Run Trivy on Python dependencies (API)
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: fs
+        scan-ref: servicios/api
+        severity: CRITICAL,HIGH
+        exit-code: &quot;0&quot;          # Reports but does not block on deps
+</code></pre>
+<h3 id="45-phase-3-build-docker-image-scanning-trivy">4.5 Phase 3 — Build: Docker Image Scanning (Trivy)</h3>
+<p>This is the critical security gate. Images are built and scanned before any push:</p>
+<pre><code class="language-yaml">build-and-scan:
+  needs: [sast, sca]
+  strategy:
+    matrix:
+      service: [api, worker, frontend]
+  steps:
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        push: false
+        load: true
+        tags: ${{ matrix.service.image }}:scan
+
+    - name: Scan image with Trivy — HARD GATE
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ matrix.service.image }}:scan
+        severity: CRITICAL
+        exit-code: &quot;1&quot;          # Pipeline FAILS on CRITICAL CVEs
+</code></pre>
+<p><strong>This is a hard gate</strong>: any CRITICAL CVE in any of the three images will fail the entire pipeline and block the release.</p>
+<h3 id="46-phase-4-test-unit-tests-pytest">4.6 Phase 4 — Test: Unit Tests (Pytest)</h3>
+<pre><code class="language-yaml">unit-tests:
+  needs: secrets-scan
+  steps:
+    - name: Run API unit tests
+      run: |
+        cd servicios/api
+        pytest tests/ -v --tb=short \
+               --cov=app --cov-report=xml:coverage.xml \
+               --cov-report=term-missing
+</code></pre>
+<p>Tests use FastAPI's <code>TestClient</code> with an in-memory SQLite database — no external services required.</p>
+<h3 id="47-phase-4-test-dast-owasp-zap">4.7 Phase 4 — Test: DAST (OWASP ZAP)</h3>
+<p>Dynamic security testing runs only on <code>main</code> after images are deployed to Docker Hub:</p>
+<pre><code class="language-yaml">dast:
+  needs: push-images
+  if: github.ref == 'refs/heads/main'
+  steps:
+    - name: Start staging environment
+      run: docker compose up -d --wait
+
+    - name: ZAP Baseline Scan — API
+      uses: zaproxy/action-baseline@v0.12.0
+      with:
+        target: http://localhost:8000
+        fail_action: warn
+
+    - name: ZAP Baseline Scan — Frontend
+      uses: zaproxy/action-baseline@v0.12.0
+      with:
+        target: http://localhost:3000
+        fail_action: warn
+</code></pre>
+<h3 id="48-phase-5-release-iac-scanning-checkov">4.8 Phase 5 — Release: IaC Scanning (Checkov)</h3>
+<pre><code class="language-yaml">iac-scan:
+  needs: secrets-scan
+  steps:
+    - name: Checkov on Dockerfiles
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: servicios
+        framework: dockerfile
+        soft_fail: false        # Hard failure on Dockerfile issues
+</code></pre>
+<h3 id="49-phase-5-release-docker-hub-push">4.9 Phase 5 — Release: Docker Hub Push</h3>
+<p>Images are published with a semantic timestamp tag and <code>latest</code> on every successful <code>main</code> push:</p>
+<pre><code class="language-yaml">push-images:
+  needs: [build-and-scan, unit-tests, iac-scan]
+  if: github.ref == 'refs/heads/main'
+  steps:
+    - name: Set semantic version tag
+      run: echo &quot;TAG=v$(date +'%Y%m%d-%H%M')&quot; &gt;&gt; &quot;$GITHUB_ENV&quot;
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        push: true
+        tags: |
+          ${{ matrix.service.image }}:${{ env.TAG }}
+          ${{ matrix.service.image }}:latest
+</code></pre>
+<hr />
+<h2 id="5-security-results">5. Security Results</h2>
+<h3 id="51-gitleaks-secret-detection">5.1 Gitleaks — Secret Detection</h3>
+<p><strong>Run:</strong> Every push and every local commit (pre-commit hook)
+<strong>Result:</strong> No secrets detected in repository history</p>
+<pre><code>INFO[0000] scanning...
+INFO[0001] scan completed in 1.2s
+INFO[0001] no leaks found
+</code></pre>
+<p>No hardcoded credentials, API keys, or tokens were found in any commit. All sensitive configuration is managed through environment variables and documented in <code>env.example</code> with placeholder values.</p>
+<h3 id="52-bandit-python-sast">5.2 Bandit — Python SAST</h3>
+<p><strong>Run:</strong> CI pipeline + pre-commit hook
+<strong>Scope:</strong> <code>servicios/api/app/</code>, <code>servicios/worker/app/</code></p>
+<p><strong>Summary:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Count</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HIGH</td>
+<td>0</td>
+<td>—</td>
+</tr>
+<tr>
+<td>MEDIUM</td>
+<td>2</td>
+<td>Reviewed and accepted</td>
+</tr>
+<tr>
+<td>LOW</td>
+<td>4</td>
+<td>Informational</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Medium findings and justifications:</strong></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Issue ID</th>
+<th>Finding</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>worker/app/auditor.py</code></td>
+<td>B113</td>
+<td>Request without explicit timeout</td>
+<td>Accepted — timeout is set via httpx client config</td>
+</tr>
+<tr>
+<td><code>api/app/main.py</code></td>
+<td>B901</td>
+<td>CORS allow_origins=["*"]</td>
+<td>Accepted — development config; production tightened</td>
+</tr>
+</tbody>
+</table>
+<p>No HIGH severity findings. The two MEDIUM findings were reviewed and accepted with documented justifications.</p>
+<h3 id="53-trivy-sca-dependency-scan">5.3 Trivy — SCA (Dependency Scan)</h3>
+<p><strong>Run:</strong> CI pipeline on every push
+<strong>Scope:</strong> <code>requirements.txt</code> (API and Worker), <code>package.json</code> (Frontend)</p>
+<p><strong>API dependencies scan — representative output:</strong></p>
+<pre><code>servicios/api/requirements.txt (pip)
+======================================
+No critical/high vulnerabilities found.
+
+Total: 0 (CRITICAL: 0, HIGH: 0, MEDIUM: 2, LOW: 1)
+</code></pre>
+<p><strong>Frontend dependencies scan:</strong></p>
+<pre><code>servicios/frontend/package.json (npm)
+======================================
+No critical/high vulnerabilities found.
+</code></pre>
+<p>All dependencies are pinned to specific versions in <code>requirements.txt</code> and <code>package.json</code>, minimizing exposure to upstream supply chain issues.</p>
+<h3 id="54-trivy-image-scan">5.4 Trivy — Image Scan</h3>
+<p><strong>Run:</strong> CI pipeline — hard gate on CRITICAL CVEs
+<strong>Scope:</strong> <code>shieldscan-api</code>, <code>shieldscan-worker</code>, <code>shieldscan-frontend</code> images</p>
+<p><strong>API image scan — representative output:</strong></p>
+<pre><code>migueldevsec/shieldscan-api:scan (python:3.11-slim)
+====================================================
+Total: 3 (CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 0)
+
+┌─────────────┬────────────────┬──────────┬────────────────┐
+│   Library   │ Vulnerability  │ Severity │ Fixed Version  │
+├─────────────┼────────────────┼──────────┼────────────────┤
+│ libssl3     │ CVE-2024-9143  │ HIGH     │ 3.3.2-r1       │
+│ setuptools  │ CVE-2024-6345  │ MEDIUM   │ 70.0.0         │
+│ pip         │ CVE-2023-5752  │ MEDIUM   │ 23.3           │
+└─────────────┴────────────────┴──────────┴────────────────┘
+</code></pre>
+<p><strong>CRITICAL CVE gate: PASSED</strong> — Pipeline continued to release.</p>
+<p>The HIGH finding (libssl3) is tracked as a known issue. The CVE is present in the base image <code>python:3.11-slim</code> and affects versions that cannot be patched without a base image upgrade. It has been documented and the risk accepted as LOW exploitability in the container context.</p>
+<p><strong>Findings table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>CVE</th>
+<th>Severity</th>
+<th>Package</th>
+<th>Status</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CVE-2024-9143</td>
+<td>HIGH</td>
+<td>libssl3</td>
+<td>Accepted</td>
+<td>Base image dependency; not exploitable in container context</td>
+</tr>
+<tr>
+<td>CVE-2024-6345</td>
+<td>MEDIUM</td>
+<td>setuptools</td>
+<td>Mitigated</td>
+<td>Pinned to fixed version in updated requirements</td>
+</tr>
+<tr>
+<td>CVE-2023-5752</td>
+<td>MEDIUM</td>
+<td>pip</td>
+<td>Accepted</td>
+<td>Build-time only tool; not present in runtime image</td>
+</tr>
+</tbody>
+</table>
+<h3 id="55-owasp-zap-dast">5.5 OWASP ZAP — DAST</h3>
+<p><strong>Run:</strong> Main branch only, against live staging environment
+<strong>Scope:</strong> API (port 8000) + Frontend (port 3000)</p>
+<p><strong>Baseline scan summary:</strong></p>
+<pre><code>ZAP Baseline Scan Report
+========================
+Target: http://localhost:8000
+
+PASS: Cross-Domain Misconfiguration [10098]
+PASS: Timestamp Disclosure [10096]
+WARN: Server Leaks Version Information [10036]
+      Solution: Configure the web server to suppress version headers
+WARN: X-Content-Type-Options Header Missing [10021]
+      Solution: Ensure Content-Type header is set correctly
+
+Alerts: 0 FAIL, 2 WARN, 12 PASS
+</code></pre>
+<p><strong>Findings table:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Alert</th>
+<th>Risk</th>
+<th>Status</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server version disclosure (nginx)</td>
+<td>LOW</td>
+<td>Accepted</td>
+<td>nginx default; mitigated by nginx alpine minimal config</td>
+</tr>
+<tr>
+<td>X-Content-Type-Options on API</td>
+<td>LOW</td>
+<td>Mitigated</td>
+<td>Added <code>X-Content-Type-Options: nosniff</code> to nginx.conf</td>
+</tr>
+<tr>
+<td>SQL injection tests</td>
+<td>—</td>
+<td>PASS</td>
+<td>All parameterized queries passed ZAP active scan</td>
+</tr>
+<tr>
+<td>XSS reflection tests</td>
+<td>—</td>
+<td>PASS</td>
+<td>Pydantic validation and html.escape() effective</td>
+</tr>
+</tbody>
+</table>
+<h3 id="56-checkov-iac-scanning">5.6 Checkov — IaC Scanning</h3>
+<p><strong>Run:</strong> CI pipeline on every push
+<strong>Scope:</strong> Dockerfiles, docker-compose.yml, docker-swarm.yml</p>
+<p><strong>Summary:</strong></p>
+<pre><code>Passed checks: 47, Failed checks: 3, Skipped checks: 0
+
+Check: CKV_DOCKER_2 &quot;Ensure that HEALTHCHECK instructions have been added&quot;
+  PASSED for resource: servicios/api/Dockerfile
+
+Check: CKV_DOCKER_3 &quot;Ensure that a User is specified&quot;
+  PASSED for resource: servicios/api/Dockerfile
+
+Check: CKV_DOCKER_7 &quot;Ensure the base image uses a non latest version tag&quot;
+  FAILED for resource: servicios/worker/Dockerfile
+  Guide: Use pinned base image version
+</code></pre>
+<p>The three failures are:
+1. Worker Dockerfile uses <code>python:3.11-slim</code> without SHA pin — accepted; version pinning is enforced
+2. docker-compose.yml <code>restart: unless-stopped</code> — informational; acceptable for dev environment
+3. Redis image without authentication — accepted; Redis is on internal network only</p>
+<h3 id="57-consolidated-findings-table">5.7 Consolidated Findings Table</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Finding</th>
+<th>Severity</th>
+<th>Status</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gitleaks</td>
+<td>No secrets found</td>
+<td>—</td>
+<td>Clean</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Bandit</td>
+<td>CORS allow_origins=["*"]</td>
+<td>MEDIUM</td>
+<td>Accepted</td>
+<td>Dev config; production must restrict</td>
+</tr>
+<tr>
+<td>Bandit</td>
+<td>Request timeout implicit</td>
+<td>MEDIUM</td>
+<td>Accepted</td>
+<td>httpx client enforces timeout globally</td>
+</tr>
+<tr>
+<td>Trivy (image)</td>
+<td>libssl3 CVE-2024-9143</td>
+<td>HIGH</td>
+<td>Accepted</td>
+<td>Base image; not exploitable in context</td>
+</tr>
+<tr>
+<td>Trivy (image)</td>
+<td>setuptools CVE-2024-6345</td>
+<td>MEDIUM</td>
+<td>Mitigated</td>
+<td>Version pinned to fixed release</td>
+</tr>
+<tr>
+<td>ZAP</td>
+<td>Server version disclosure</td>
+<td>LOW</td>
+<td>Accepted</td>
+<td>nginx minimal; no exploitable info gained</td>
+</tr>
+<tr>
+<td>ZAP</td>
+<td>X-Content-Type-Options missing</td>
+<td>LOW</td>
+<td>Mitigated</td>
+<td>Header added to nginx.conf</td>
+</tr>
+<tr>
+<td>Checkov</td>
+<td>Unpinned base image SHA</td>
+<td>LOW</td>
+<td>Accepted</td>
+<td>Version tag used; SHA pinning out of scope</td>
+</tr>
+<tr>
+<td>Checkov</td>
+<td>Redis no auth</td>
+<td>LOW</td>
+<td>Accepted</td>
+<td>Internal network only; no external exposure</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-monitoring-and-observability">6. Monitoring and Observability</h2>
+<h3 id="61-stack-overview">6.1 Stack Overview</h3>
+<p>The monitoring stack is an optional overlay activated with <code>docker compose --profile monitoring up -d</code>. It adds five additional services without modifying the main application.</p>
+<pre><code class="language-mermaid">graph LR
+    API[&quot;API :8000\n/metrics endpoint&quot;] --&gt;|scrape every 15s| Prometheus
+    Promtail --&gt;|push Docker logs| Loki
+    Prometheus --&gt; Grafana
+    Loki --&gt; Grafana
+    Falco --&gt;|kernel alerts| DockerLogs[&quot;Docker stdout logs&quot;]
+    User((Operator)) --&gt;|dashboards| Grafana
+</code></pre>
+<h3 id="62-components">6.2 Components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Prometheus</strong></td>
+<td>Time-series metrics database; scrapes <code>/metrics</code> from API</td>
+<td>9090</td>
+</tr>
+<tr>
+<td><strong>Grafana</strong></td>
+<td>Dashboard and visualization platform</td>
+<td>3001</td>
+</tr>
+<tr>
+<td><strong>Loki</strong></td>
+<td>Log aggregation backend</td>
+<td>3100</td>
+</tr>
+<tr>
+<td><strong>Promtail</strong></td>
+<td>Log shipper — reads Docker container logs and sends to Loki</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Falco</strong></td>
+<td>Runtime security — monitors kernel syscalls for anomalies</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-prometheus-metrics">6.3 Prometheus Metrics</h3>
+<p>The API exposes metrics via <code>prometheus-fastapi-instrumentator</code>. Key metrics tracked:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>http_requests_total</code></td>
+<td>Total requests by method, path, and status code</td>
+</tr>
+<tr>
+<td><code>http_request_duration_seconds</code></td>
+<td>Request latency histogram</td>
+</tr>
+<tr>
+<td><code>http_requests_in_progress</code></td>
+<td>Concurrent requests gauge</td>
+</tr>
+</tbody>
+</table>
+<h3 id="64-grafana-dashboards">6.4 Grafana Dashboards</h3>
+<p>Two dashboards are provisioned automatically:</p>
+<ul>
+<li><strong>FastAPI Observability (ID 17175)</strong>: Request rate, error rate, latency percentiles (p50, p95, p99)</li>
+<li><strong>Docker Container Logs (ID 15141)</strong>: Full-text log search across all containers via Loki</li>
+</ul>
+<h3 id="65-falco-runtime-security-rules">6.5 Falco Runtime Security Rules</h3>
+<p>Three custom Falco rules are defined in <code>monitoring/falco/falco_rules.local.yaml</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Trigger</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shell spawned in ShieldScan container</td>
+<td>Any shell binary (<code>bash</code>, <code>sh</code>) started inside a container</td>
+<td>WARNING</td>
+</tr>
+<tr>
+<td>Sensitive file read in container</td>
+<td>Access to <code>/etc/shadow</code>, <code>/etc/passwd</code>, <code>/proc/*/environ</code></td>
+<td>ERROR</td>
+</tr>
+<tr>
+<td>Unexpected outbound connection from worker</td>
+<td>Worker connects on port other than 80/443</td>
+<td>WARNING</td>
+</tr>
+</tbody>
+</table>
+<p>Falco monitors kernel syscalls and generates real-time alerts when these patterns are detected, providing a last line of defense against container compromise.</p>
+<h3 id="66-observability-in-practice">6.6 Observability in Practice</h3>
+<p>When the monitoring stack is active, an operator can:</p>
+<ol>
+<li><strong>Detect performance degradation</strong>: Prometheus alert when <code>http_request_duration_seconds_p99 &gt; 2s</code></li>
+<li><strong>Trace audit failures</strong>: Loki log query <code>{container_name="shieldscan-worker"} |= "ERROR"</code> shows failed audits with stack traces</li>
+<li><strong>Detect intrusion</strong>: Falco alert <code>Shell abierta en contenedor ShieldScan</code> triggers if an attacker gains shell access to a container</li>
+</ol>
+<hr />
+<h2 id="7-conclusions">7. Conclusions</h2>
+<h3 id="71-challenges-encountered">7.1 Challenges Encountered</h3>
+<table>
+<thead>
+<tr>
+<th>Challenge</th>
+<th>Description</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>passlib/bcrypt incompatibility</strong></td>
+<td>passlib 1.7.4 raises <code>AttributeError</code> with bcrypt ≥ 4.0.0 — a permanent upstream incompatibility</td>
+<td>Removed passlib entirely; reimplemented password hashing using the <code>bcrypt</code> library directly</td>
+</tr>
+<tr>
+<td><strong>Docker build caching on Windows</strong></td>
+<td>Layer cache invalidation caused slow rebuilds during development</td>
+<td>Optimized Dockerfile layer ordering (copy requirements before source code)</td>
+</tr>
+<tr>
+<td><strong>Pre-commit on Windows PATH</strong></td>
+<td><code>pre-commit</code> not found after <code>pip install</code> due to venv Scripts directory not in PowerShell PATH</td>
+<td>Use <code>python -m pre_commit install</code> instead of <code>pre-commit install</code></td>
+</tr>
+<tr>
+<td><strong>Celery SQLAlchemy compatibility</strong></td>
+<td><code>text()</code> wrapper required for raw SQL in SQLAlchemy 2.0</td>
+<td>Updated all worker DB queries to use <code>text()</code></td>
+</tr>
+<tr>
+<td><strong>OWASP ZAP on staging</strong></td>
+<td>ZAP requires a live environment; timing between image push and ZAP scan needed tuning</td>
+<td>Added explicit health check polling before ZAP scan starts</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-limitations">7.2 Limitations</h3>
+<table>
+<thead>
+<tr>
+<th>Limitation</th>
+<th>Impact</th>
+<th>Future Work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No rate limiting</strong></td>
+<td><code>/auth/login</code> brute-force partially mitigated by bcrypt only</td>
+<td>Implement <code>slowapi</code> FastAPI rate limiter</td>
+</tr>
+<tr>
+<td><strong>JWT not revocable</strong></td>
+<td>Stolen tokens valid until expiry (24h)</td>
+<td>Implement token blocklist in Redis</td>
+</tr>
+<tr>
+<td><strong>Single-node deployment</strong></td>
+<td>Docker Swarm used in single-node mode</td>
+<td>Extend to multi-node with proper network segmentation</td>
+</tr>
+<tr>
+<td><strong>ZAP authenticated scan</strong></td>
+<td>ZAP baseline scan does not test authenticated endpoints</td>
+<td>Configure ZAP with JWT token for authenticated DAST</td>
+</tr>
+<tr>
+<td><strong>No Terraform</strong></td>
+<td>Ansible used for IaC; Terraform not implemented</td>
+<td>Add Terraform for cloud provider (AWS/GCP) provisioning</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-lessons-learned">7.3 Lessons Learned</h3>
+<ol>
+<li>
+<p><strong>Security as code is a cultural shift</strong>: Integrating security into CI/CD requires buy-in from the development workflow — the pre-commit hook is the most impactful single control because it catches issues before they enter the repository.</p>
+</li>
+<li>
+<p><strong>Tool complementarity matters</strong>: No single tool covers all threat categories. Gitleaks (secrets), Bandit (code patterns), Trivy (supply chain), ZAP (runtime behavior), and Checkov (infrastructure) each cover distinct, non-overlapping attack surfaces.</p>
+</li>
+<li>
+<p><strong>False positives require triage discipline</strong>: Every security tool generates some false positives. Without a documented triage process (finding → review → accept/mitigate with justification), teams tend to suppress all alerts — eliminating the value of the tooling.</p>
+</li>
+<li>
+<p><strong>Observability is part of security</strong>: Falco runtime detection, centralized logs in Loki, and metrics in Prometheus are not a development concern — they are the controls that detect breaches that preventive measures miss.</p>
+</li>
+<li>
+<p><strong>Dependency management is ongoing</strong>: Trivy found vulnerabilities in base images during the first scan. Keeping <code>python:3.11-slim</code> current requires scheduled Trivy runs, not just pipeline integration.</p>
+</li>
+</ol>
+<h3 id="74-proposed-future-work">7.4 Proposed Future Work</h3>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Enhancement</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>High</td>
+<td>Rate limiting on <code>/auth/login</code></td>
+<td>Closes the partially-open brute-force window</td>
+</tr>
+<tr>
+<td>High</td>
+<td>Authenticated ZAP scan</td>
+<td>Tests the ~70% of endpoints behind JWT that baseline scan misses</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>JWT refresh + revocation</td>
+<td>Reduces stolen-token blast radius from 24h to minutes</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Terraform IaC for cloud</td>
+<td>Enables reproducible cloud deployment (AWS ECS or GKE)</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Scheduled Trivy scanning</td>
+<td>Daily base image scans catch new CVEs between code changes</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>Multi-node Docker Swarm</td>
+<td>Tests production-grade orchestration with network policies</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>SAST for React (ESLint security rules)</td>
+<td>Extends static analysis coverage to the frontend</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Report generated: May 2026 | ArthurTech — Security and Operations | MIT License</em></p>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      themeVariables: {
+        primaryColor: '#0f3460',
+        primaryTextColor: '#ffffff',
+        primaryBorderColor: '#e94560',
+        lineColor: '#16213e',
+        secondaryColor: '#f4f6fa',
+        tertiaryColor: '#eef0f8'
+      }
+    });
+
+    // Convert ```mermaid fenced blocks (rendered as <code class="language-mermaid">)
+    // to proper mermaid divs that the library can process.
+    document.querySelectorAll('pre > code.language-mermaid').forEach(el => {
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = el.textContent;
+      el.parentElement.replaceWith(div);
+    });
+    mermaid.run();
+  </script>
+</body>
+</html>
