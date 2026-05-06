@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
 [![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://reactjs.org)
+[![Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen)](servicios/api/tests/)
 
 Security auditing platform for WordPress and general web applications, built with a **microservices architecture** and fully integrated into a **DevSecOps pipeline**.
 

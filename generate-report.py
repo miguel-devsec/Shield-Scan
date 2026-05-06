@@ -6,7 +6,7 @@ import markdown
 import pathlib
 import sys
 
-SRC = pathlib.Path(__file__).parent / "docs-en" / "technical-report.md"
+SRC = pathlib.Path(__file__).parent / "docs" / "technical-report.md"
 OUT = pathlib.Path(__file__).parent / "ShieldScan-Technical-Report.html"
 
 md_text = SRC.read_text(encoding="utf-8")
