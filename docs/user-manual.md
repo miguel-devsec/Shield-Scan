@@ -33,6 +33,8 @@ Fill in the registration form:
 | **Email** | A valid email address; used as your username |
 | **Password** | Minimum 8 characters; stored with bcrypt hashing |
 
+![Registration form](../images/creating_account.png)
+
 Click **Create Account**. On success, you are redirected to the login page.
 
 > **Note:** New accounts start with the `user` role. Admin access must be granted manually by an administrator.
@@ -42,6 +44,8 @@ Click **Create Account**. On success, you are redirected to the login page.
 Click **Login** (or navigate to `/login`).
 
 Enter your email and password, then click **Sign In**.
+
+![Login page](../images/login.png)
 
 On success, a JWT token is stored in your browser's localStorage and you are redirected to the **Dashboard**.
 
@@ -57,6 +61,8 @@ The Dashboard is your home screen after logging in. It shows:
 - A button to start a new audit
 - Status indicators for each audit (Pending, Running, Completed, Failed)
 
+![New user dashboard — no audits yet](../images/new_user_dashboard.png)
+
 ### Dashboard columns
 
 | Column | Description |
@@ -67,6 +73,8 @@ The Dashboard is your home screen after logging in. It shows:
 | **Status** | Current state of the audit |
 | **Created** | Date and time the audit was started |
 | **Action** | Link to view the full audit report |
+
+![Dashboard with existing audits](../images/user_registered_dashboard.png)
 
 ---
 
@@ -83,6 +91,8 @@ Fill in the form:
 | **URL** | The website to audit | `https://example.com` |
 | **Company / Label** | A name to identify this audit | `Client ACME Corp` |
 
+![New audit form](../images/new_scanning.png)
+
 Click **Start Audit**.
 
 ShieldScan:
@@ -93,6 +103,8 @@ ShieldScan:
 ### 4.2 Audit execution
 
 The audit runs asynchronously — the page will show a loading indicator while the worker processes the request. The typical audit takes **5–20 seconds** depending on the target site's response time.
+
+![Audit in progress](../images/scanning_in_proccess.png)
 
 Status lifecycle:
 
@@ -108,6 +120,8 @@ The page auto-refreshes until the audit reaches a terminal state.
 ## 5. Reading Audit Results
 
 When the audit completes, the results page shows a structured report divided into sections.
+
+![Audit results report](../images/scanning_results.png)
 
 ### 5.1 Security Score
 
@@ -243,6 +257,8 @@ Advanced users can access the API directly. The interactive documentation is ava
 ```
 http://localhost:8000/docs
 ```
+
+![API interactive documentation](../images/api_docs.png)
 
 To authenticate in the Swagger UI:
 1. `POST /auth/login` with your credentials
