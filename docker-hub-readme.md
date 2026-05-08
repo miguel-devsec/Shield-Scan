@@ -119,9 +119,9 @@ REDIS_URL=redis://redis:6379/0
 ## Source Code & Documentation
 
 - **GitHub**: https://github.com/miguel-devsec/ShieldScan
-- **Architecture Manual**: `/docs-en/architecture.md`
-- **Deployment Guide**: `/docs-en/deployment-operations.md`
-- **Security Manual**: `/docs-en/security-manual.md`
+- **Architecture Manual**: `/docs/architecture.md`
+- **Deployment Guide**: `/docs/deployment-operations.md`
+- **Security Manual**: `/docs/security-manual.md`
 
 ---
 
