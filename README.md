@@ -192,6 +192,7 @@ ShieldScan/
 
 | Document | Description |
 |----------|-------------|
+| [Getting Started](GETTING-STARTED.md) | **Start here** — run ShieldScan locally with Docker, no technical background required |
 | [Architecture Manual](docs/architecture.md) | Microservices design, UML diagrams, patterns |
 | [Development Guide](docs/development-guide.md) | Local setup, testing, contribution workflow |
 | [Deployment & Operations](docs/deployment-operations.md) | Production deployment, Ansible, Swarm |
